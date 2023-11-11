@@ -1,0 +1,10 @@
+# separators must be TABs, one cookie per line
+# 0. string example.com - the domain name
+# 1. boolean FALSE - include subdomains
+# 2. string /foobar/ - path
+# 3. boolean TRUE - send/receive over HTTPS only
+# 4. number 1462299217 - expires at - seconds since Jan 1st 1970, or 0
+# 5. string person - name of the cookie
+# 5. string daniel - value of the cookie
+# #HttpOnly_ prefix for HttpOnly cookie
+#HttpOnly_	localhost	TRUE	/	TRUE	0	__session	WbiQ1akyHCcRSuBCkhVz6

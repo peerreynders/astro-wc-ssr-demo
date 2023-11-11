@@ -1,0 +1,50 @@
+{
+  "name": "astro-wc-ssr-demo",
+  "type": "module",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+		"lint:es": "eslint -c .eslintrc.server.cjs ./src",
+		"lint:types": "astro check",
+    "client:build": "./node_modules/.bin/rollup -c src/client/rollup.config.mjs",
+    "client:types": "./node_modules/.bin/tsc --noEmit -p src/client/tsconfig.json",
+		"client:es": "eslint -c .eslintrc.client.cjs ./src/client",
+    "format": "prettier --write ./src --plugin prettier-plugin-astro"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peerreynders/astro-wc-ssr-demo"
+  },
+  "keywords": [],
+  "author": "Peer Reynders",
+  "license": "MIT",
+  "homepage": "https://github.com/peerreynders/astro-wc-ssr-demo",
+  "bugs": {
+    "url": "https://github.com/peerreynders/astro-wc-ssr-demo/issues"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.3.0",
+    "@astrojs/node": "^6.0.3",
+    "astro": "^3.4.1",
+    "nanoid": "^5.0.3",
+    "typescript": "^5.2.2",
+    "uncrypto": "^0.1.3",
+    "unstorage": "^1.9.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "eslint": "^8.53.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.0.3",
+    "prettier-plugin-astro": "^0.12.1",
+    "rollup": "^4.2.0"
+  }
+}

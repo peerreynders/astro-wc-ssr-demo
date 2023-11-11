@@ -1,0 +1,19 @@
+---
+import type { Todo } from '../types';
+
+interface Props {
+	todo?: Todo;
+}
+
+const todo = Astro.props.todo;
+const [todoId, title, index, checked] = todo
+	? [todo.id, todo.title, String(todo.index), todo.completed ? '' : undefined]
+	: ['', '', '', undefined];
+---
+
+<li class="c-todos-view__item" data-index={index}>
+	<label data-id={todoId}>
+		<input type="checkbox" checked={checked} />{title}
+	</label>
+	<button>❌</button>
+</li>
