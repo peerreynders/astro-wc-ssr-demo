@@ -1,0 +1,17 @@
+---
+import Base from '../layouts/base.astro';
+import MainTemplates from '../templates/main-templates.astro';
+import TodosView from '../components/todos-view.astro';
+import { selectTodos } from './todos-store';
+
+const todoItems = await selectTodos(Astro.locals.sessionId);
+const title = `Astro "WC: zero to hero" Todos`;
+---
+
+<Base {title}>
+	<TodosView {title} {todoItems} />
+	<MainTemplates />
+	{
+		/* <script is:inline id="resume-data" type="application/json" set:html={JSON.stringify(todoItems)} /> */
+	}
+</Base>

@@ -1,0 +1,28 @@
+---
+import type { Todo } from '../types';
+import TodoItem from './todo-item.astro';
+
+interface Props {
+	title: string;
+	todoItems: Todo[];
+}
+
+const { title, todoItems } = Astro.props;
+---
+
+<div class="js:c-todos-view c-todos-view">
+	<h3>{title}</h3>
+	<br />
+	<h1>To do</h1>
+	<form>
+		<input
+			type="text"
+			placeholder="Add a new to do"
+			class="js:c-todos-view__title"
+		/>
+		<button class="js:c-todos-view__new">✅</button>
+	</form>
+	<ul class="js:c-todos-view__list">
+		{todoItems.map((todo) => <TodoItem todo={todo} />)}
+	</ul>
+</div>

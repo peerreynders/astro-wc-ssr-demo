@@ -1,0 +1,7 @@
+**/dist
+package-lock.json
+pnpm-lock.yaml
+.cache
+.changeset
+.github
+.nitro
