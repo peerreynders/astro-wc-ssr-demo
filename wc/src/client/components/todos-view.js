@@ -35,7 +35,7 @@ function getItemBlank() {
 /** @param {HTMLLIElement} original
  * @param {Todo} todo
  */
-function fillTodoItem(original, todo) {
+function fillItem(original, todo) {
 	const root = /** @type{HTMLLIElement} */ (original.cloneNode(true));
 	const label = root.querySelector(SELECTOR_LABEL);
 	const checkbox = root.querySelector(SELECTOR_CHECKBOX);
@@ -124,7 +124,7 @@ function initialize({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
 /** @param {Binder} binder
  * @param {Readonly<Todo>} todo
  */
-function addTodo(binder, todo) {
+function addItem(binder, todo) {
 	/** @type{HTMLElement | undefined} */
 	let previous;
 	const children = binder.list.children;
@@ -142,7 +142,7 @@ function addTodo(binder, todo) {
 		}
 	}
 
-	const item = fillTodoItem(binder.module.itemBlank, todo);
+	const item = fillItem(binder.module.itemBlank, todo);
 	if (previous) {
 		previous.after(item);
 	} else {
@@ -153,7 +153,7 @@ function addTodo(binder, todo) {
 /** @param {Binder} binder
  * @param {string} id
  */
-function deleteTodo(binder, id) {
+function removeItem(binder, id) {
 	const label = binder.list.querySelector(makeLabelIdSelector(id));
 	if (!(label instanceof HTMLLabelElement)) return;
 
@@ -167,7 +167,7 @@ function deleteTodo(binder, id) {
  * @param {string} id
  * @param {boolean} completed
  */
-function toggleTodo(binder, id, completed) {
+function toggleItem(binder, id, completed) {
 	const label = binder.list.querySelector(makeLabelIdSelector(id));
 	if (!(label instanceof HTMLLabelElement)) return;
 
@@ -205,13 +205,13 @@ function makeBinder(module, root) {
 		unsubscribeTodoEvent: module.subscribeTodoEvent((event) => {
 			switch (event.kind) {
 				case 'todo-new':
-					return addTodo(binder, event.todo);
+					return addItem(binder, event.todo);
 
-				case 'todo-delete':
-					return deleteTodo(binder, event.id);
+				case 'todo-remove':
+					return removeItem(binder, event.id);
 
 				case 'todo-toggle':
-					return toggleTodo(binder, event.id, event.completed);
+					return toggleItem(binder, event.id, event.completed);
 			}
 		}),
 	};

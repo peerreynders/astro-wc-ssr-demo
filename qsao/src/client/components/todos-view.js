@@ -36,7 +36,7 @@ function getItemBlank() {
 /** @param {HTMLLIElement} original
  * @param {Todo} todo
  */
-function fillTodoItem(original, todo) {
+function fillItem(original, todo) {
 	const root = /** @type{HTMLLIElement} */ (original.cloneNode(true));
 	const label = root.querySelector(SELECTOR_LABEL);
 	const checkbox = root.querySelector(SELECTOR_CHECKBOX);
@@ -116,7 +116,7 @@ function addItem(binder, todo) {
 		}
 	}
 
-	const item = fillTodoItem(binder.itemBlank, todo);
+	const item = fillItem(binder.itemBlank, todo);
 	if (previous) {
 		previous.after(item);
 	} else {

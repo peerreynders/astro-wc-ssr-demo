@@ -32,7 +32,7 @@ function makeApp(platform) {
 		const removed = await platform.removeTodo(id);
 		if (!removed) return;
 
-		todoEvents.send({ kind: 'todo-delete', id });
+		todoEvents.send({ kind: 'todo-remove', id });
 	};
 
 	/** @type { ToggleTodo } */

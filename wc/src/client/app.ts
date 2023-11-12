@@ -8,7 +8,7 @@ export type TodoEvent = Readonly<
 			todo: Readonly<Todo>;
 	  }
 	| {
-			kind: 'todo-delete';
+			kind: 'todo-remove';
 			id: Todo['id'];
 	  }
 	| {
