@@ -1,11 +1,12 @@
 ---
+// file: src/pages/index.astro
 import Base from '../layouts/base.astro';
 import MainTemplates from '../templates/main-templates.astro';
 import TodosView from '../components/todos-view.astro';
 import { selectTodos } from './todos-store';
 
 const todoItems = await selectTodos(Astro.locals.sessionId);
-const title = `Astro "WC: zero to hero" Todos`;
+const title = `Astro "qsa-observer: zero to hero" Todos`;
 ---
 
 <Base {title}>

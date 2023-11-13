@@ -32,11 +32,11 @@ function getItemBlank() {
 	return root;
 }
 
-/** @param {HTMLLIElement} original
+/** @param {HTMLLIElement} blank
  * @param {Todo} todo
  */
-function fillItem(original, todo) {
-	const root = /** @type{HTMLLIElement} */ (original.cloneNode(true));
+function fillItem(blank, todo) {
+	const root = /** @type{HTMLLIElement} */ (blank.cloneNode(true));
 	const label = root.querySelector(SELECTOR_LABEL);
 	const checkbox = root.querySelector(SELECTOR_CHECKBOX);
 	if (
