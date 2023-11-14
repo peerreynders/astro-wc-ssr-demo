@@ -29,43 +29,50 @@ function makeCloneBlankItem() {
 
 	return function cloneBlankItem() {
 		return /** @type {HTMLLIElement} */ (root.cloneNode(true));
-	}
+	};
 }
 
-/** @typedef {object} ItemBinder
-	* @property {HTMLLIElement} root
-	* @property {HTMLInputElement} completed
-	* @property {HTMLButtonElement} remove
-	* @property {string} id
-	* @property {number} index
+/**	@typedef {object} ItemBinder
+	*	@property {HTMLLIElement} root
+	*	@property {HTMLInputElement} completed
+	*	@property {HTMLButtonElement} remove
+	*	@property {string} id
+	*	@property {number} index
 	*/
 
 /** @typedef {ItemBinder[]} ItemCollection */
 /* Note keep sorted by ascending index property */
 
-/** @param {ItemBinder['root']} root 
-	* @param {ItemBinder['completed']} completed 
-	* @param {ItemBinder['remove']} remove 
-	* @param {ItemBinder['id']} id 
-	* @param {ItemBinder['index']} index 
-	*/
-const makeItemBinder = (root, completed, remove, id, index) =>
-	({ root, completed, remove, id, index });
+/**	@param {ItemBinder['root']} root
+	*	@param {ItemBinder['completed']} completed
+	*	@param {ItemBinder['remove']} remove
+	*	@param {ItemBinder['id']} id
+	*	@param {ItemBinder['index']} index
+ 	*/
+const makeItemBinder = (root, completed, remove, id, index) => ({
+	root,
+	completed,
+	remove,
+	id,
+	index,
+});
 
-/** @param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
-	* @param {Todo} todo
-	* @returns {[root: HTMLLIElement, binder: ItemBinder]}
+/**	@param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
+	*	@param {Todo} todo
+	*	@returns {[root: HTMLLIElement, binder: ItemBinder]}
 	*/
 function fillItem(cloneBlankItem, todo) {
 	const root = cloneBlankItem();
 	const label = root.querySelector(SELECTOR_LABEL);
 	const checkbox = root.querySelector(SELECTOR_CHECKBOX);
 	const remove = root.querySelector(SELECTOR_REMOVE);
-	if (!(
-		label instanceof HTMLLabelElement && 
-		checkbox instanceof HTMLInputElement &&
-		remove instanceof HTMLButtonElement 
-	))
+	if (
+		!(
+			label instanceof HTMLLabelElement &&
+			checkbox instanceof HTMLInputElement &&
+			remove instanceof HTMLButtonElement
+		)
+	)
 		throw new Error('Unexpected <li> shape for todo');
 
 	root.dataset['index'] = String(todo.index);
@@ -79,12 +86,12 @@ function fillItem(cloneBlankItem, todo) {
 }
 
 /**	@param {ItemBinder} itemA
-	* @param {ItemBinder} itemB
+	*	@param {ItemBinder} itemB
 	*/
-const byIndexAsc = ({index: a}, {index: b}) => a - b;
+const byIndexAsc = ({ index: a }, { index: b }) => a - b;
 
-/** @param {HTMLUListElement} list
-	* @returns {ItemCollection}
+/**	@param {HTMLUListElement} list
+	*	@returns {ItemCollection}
 	*/
 function fromUL(list) {
 	const items = list.children;
@@ -93,29 +100,23 @@ function fromUL(list) {
 	const binders = [];
 	for (let i = 0; i < items.length; i += 1) {
 		const root = items.item(i);
-		if (!(root instanceof HTMLLIElement))
-			continue;
+		if (!(root instanceof HTMLLIElement)) continue;
 
 		const value = root.dataset['index'];
 		const index = value ? parseInt(value, 10) : NaN;
-		if (Number.isNaN(index))
-			continue;
+		if (Number.isNaN(index)) continue;
 
 		const label = root.querySelector(SELECTOR_LABEL);
-		if (!(label instanceof HTMLLabelElement))
-			continue;
+		if (!(label instanceof HTMLLabelElement)) continue;
 
 		const id = label.dataset['id'] ?? '';
-		if (id.length < 1)
-			continue;
+		if (id.length < 1) continue;
 
 		const completed = root.querySelector(SELECTOR_CHECKBOX);
-		if (!(completed instanceof HTMLInputElement))
-			continue;
+		if (!(completed instanceof HTMLInputElement)) continue;
 
 		const remove = root.querySelector(SELECTOR_REMOVE);
-		if (!(remove instanceof HTMLButtonElement))
-			continue;
+		if (!(remove instanceof HTMLButtonElement)) continue;
 
 		binders.push(makeItemBinder(root, completed, remove, id, index));
 	}
@@ -123,24 +124,23 @@ function fromUL(list) {
 	return binders.sort(byIndexAsc);
 }
 
-/** @param {ItemCollection} binders 
-	* @param {ItemBinder} newBinder
-	* @returns { HTMLLIElement | undefined }
+/**	@param {ItemCollection} binders
+	*	@param {ItemBinder} newBinder
+	*	@returns { HTMLLIElement | undefined }
 	*/
 function spliceItemBinder(binders, newBinder) {
 	const last = binders.length - 1;
 	// Scan collection in reverse bailing on the
 	// first index property smaller than the
-	// new index property 
+	// new index property
 	// (item binders are in ascending index property order)
 	let i = last;
-	for(;i > -1; i -= 1)
-		if (binders[i].index < newBinder.index) break;
+	for (; i > -1; i -= 1) if (binders[i].index < newBinder.index) break;
 
 	if (i < 0) {
 		binders[0] = newBinder;
 		return undefined;
-	} 
+	}
 
 	const before = binders[i].root;
 	if (i === last) {
@@ -152,34 +152,32 @@ function spliceItemBinder(binders, newBinder) {
 	return before;
 }
 
-/** @param {ToggleTodo} toggleTodo
- 	* @param {RemoveTodo} removeTodo
-	*	@param {ItemCollection} binders 
-	* @param {EventTarget | undefined | null} target
-	* @returns { boolean } actionRequested
+/**	@param {ToggleTodo} toggleTodo
+	*	@param {RemoveTodo} removeTodo
+	*	@param {ItemCollection} binders
+	*	@param {EventTarget | undefined | null} target
+	*	@returns { boolean } actionRequested
 	*/
-function dispatchIntent(toggleTodo, removeTodo, binders, target){
+function dispatchIntent(toggleTodo, removeTodo, binders, target) {
 	// checkbox clicked →  toggle todo
 	// button clicked → remove todo
-	/** @type {[
+	/**	@type {[
 		*		predicate: ((binder: ItemBinder) => boolean) | undefined,
 		*		remove: boolean,
 		*		completed: boolean,
-		* ]} 
+		*	]}
 		*/
-	const [predicate, remove, completed] = 
-		target instanceof HTMLInputElement	?
-		[(binder) => binder.completed === target, false, target.checked] :
-		target instanceof HTMLButtonElement ? 
-		[(binder) => binder.remove === target, true, false] :
-		[undefined, false, false];
+	const [predicate, remove, completed] =
+		target instanceof HTMLInputElement
+			? [(binder) => binder.completed === target, false, target.checked]
+			: target instanceof HTMLButtonElement
+			? [(binder) => binder.remove === target, true, false]
+			: [undefined, false, false];
 
-	if (predicate === undefined)
-		return false;
+	if (predicate === undefined) return false;
 
 	const binder = binders.find(predicate);
-	if(!binder)
-		return false;
+	if (!binder) return false;
 
 	if (remove) removeTodo(binder.id);
 	else toggleTodo(binder.id, completed);
@@ -188,31 +186,47 @@ function dispatchIntent(toggleTodo, removeTodo, binders, target){
 	return true;
 }
 
-/** @typedef {object} Binder
-	* @property {HTMLElement} root
-	* @property {HTMLInputElement} title
-	* @property {HTMLButtonElement} newTitle
-	* @property {HTMLUListElement} list
-	* @property {ItemCollection} items
-	* @property {() => void} unsubscribeTodoEvent
+/**	@typedef {object} Binder
+	*	@property {HTMLElement} root
+	*	@property {HTMLInputElement} title
+	*	@property {HTMLButtonElement} newTitle
+	*	@property {HTMLUListElement} list
+	*	@property {ItemCollection} items
+	*	@property {(this: Binder, event: Event) => void} handleEvent
+	*	@property {(() => void) | undefined} unsubscribeTodoEvent
 	*/
 
-/** @param {ItemCollection} binders
- * @param {string} id
- */
+/**	@param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
+	*	@param {HTMLUListElement} list
+	*	@param {ItemCollection} binders
+	*	@param {Readonly<Todo>} todo
+	*/
+function addItem(cloneBlankItem, list, binders, todo) {
+	const [item, binder] = fillItem(cloneBlankItem, todo);
+	const before = spliceItemBinder(binders, binder);
+	if (before) {
+		before.after(item);
+	} else {
+		list.prepend(item);
+	}
+}
+
+/**	@param {ItemCollection} binders
+	*	@param {string} id
+	*/
 function removeItem(binders, id) {
 	const i = binders.findIndex((binder) => binder.id === id);
 	if (i < 0) return;
-	
+
 	const binder = binders[i];
-	binders.splice(i,1);
-	binder.root.remove()
+	binders.splice(i, 1);
+	binder.root.remove();
 }
 
-/** @param {ItemCollection} binders
- 	* @param {string} id
- 	* @param {boolean} completed
- 	*/
+/**	@param {ItemCollection} binders
+	*	@param {string} id
+	*	@param {boolean} completed
+	*/
 function toggleItem(binders, id, completed) {
 	const binder = binders.find((binder) => binder.id === id);
 	if (!binder) return;
@@ -221,35 +235,60 @@ function toggleItem(binders, id, completed) {
 	if (completed !== checkbox.checked) checkbox.checked = completed;
 }
 
-/** @param {{
- * 	addTodo: AddTodo;
- * 	removeTodo: RemoveTodo;
- * 	toggleTodo: ToggleTodo;
- * 	subscribeTodoEvent: SubscribeTodoEvent;
- * }} depend
- */
-function makeClass({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
-  const cloneBlankItem = makeCloneBlankItem();
+/**	@param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
+	*	@param {Binder} binder
+	*	@returns {(event: TodoEvent) => void}
+ 	*/
+function makeTodoNotify(cloneBlankItem, binder) {
+	return function todoNotify(event) {
+		switch (event.kind) {
+			case 'todo-new':
+				return addItem(cloneBlankItem, binder.list, binder.items, event.todo);
 
-	/** @param {HTMLUListElement} list
-		* @param {ItemCollection} binders
-		* @param {Readonly<Todo>} todo
- 		*/
-	function addItem(list, binders, todo) {
-		const [item, binder] = fillItem(cloneBlankItem, todo);
-		const before = spliceItemBinder(binders, binder);
-		if (before) {
-			before.after(item);
-		} else {
-			list.prepend(item);
+			case 'todo-remove':
+				return removeItem(binder.items, event.id);
+
+			case 'todo-toggle':
+				return toggleItem(binder.items, event.id, event.completed);
 		}
-	}
+	};
+}
+
+/** @param {{
+	*		addTodo: AddTodo;
+	*		removeTodo: RemoveTodo;
+	*		toggleTodo: ToggleTodo;
+	*		subscribeTodoEvent: SubscribeTodoEvent;
+	*	}} depend
+	*/
+function makeClass({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
+	const cloneBlankItem = makeCloneBlankItem();
 
 	/** @param {HTMLInputElement} title
- 		*/
+		*/
 	async function dispatchAddTodo(title) {
 		await addTodo(title.value);
 		title.value = '';
+	}
+
+	/** @this Binder
+		* @param {Event} event
+		*/
+	function handleEvent(event) {
+		if (event.type === 'click') {
+			if (event.target === this.newTitle) {
+				// Add new todo
+				event.preventDefault();
+				if (this.title.value.length < 1) return;
+
+				dispatchAddTodo(this.title);
+				return;
+			}
+
+			// Toggle/Remove Todo
+			dispatchIntent(toggleTodo, removeTodo, this.items, event.target);
+			return;
+		}
 	}
 
 	class TodosView extends HTMLElement {
@@ -280,23 +319,15 @@ function makeClass({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
 				newTitle,
 				list,
 				items: fromUL(list),
-				unsubscribeTodoEvent: subscribeTodoEvent((event) => {
-					switch (event.kind) {
-						case 'todo-new':
-							return addItem(binder.list, binder.items, event.todo);
-
-						case 'todo-remove':
-							return removeItem(binder.items, event.id);
-
-						case 'todo-toggle':
-							return toggleItem(binder.items, event.id, event.completed);
-					};
-				}),
+				handleEvent,
+				unsubscribeTodoEvent: undefined,
 			};
 
-			binder.newTitle.addEventListener('click', this);
-			binder.list.addEventListener('click', this);
-
+			binder.unsubscribeTodoEvent = subscribeTodoEvent(
+				makeTodoNotify(cloneBlankItem, binder)
+			);
+			binder.newTitle.addEventListener('click', binder);
+			binder.list.addEventListener('click', binder);
 			this.binder = binder;
 		}
 
@@ -305,38 +336,10 @@ function makeClass({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
 
 			const binder = this.binder;
 			this.binder = undefined;
-			binder.list.removeEventListener('click', this);
-			binder.newTitle.removeEventListener('click', this);
-			binder.unsubscribeTodoEvent();
+			binder.list.removeEventListener('click', binder);
+			binder.newTitle.removeEventListener('click', binder);
+			binder.unsubscribeTodoEvent?.();
 		}
-
-		/** @param {Event} event */
-		handleEvent(event) {
-			if (!this.binder) return;
-
-			const { newTitle, title } = this.binder;
-
-			if (event.type === 'click') {
-				if (event.target === newTitle) {
-					// Add new todo
-					event.preventDefault();
-					if (title.value.length < 1) return;
-
-					dispatchAddTodo(title);
-					return;
-				}
-
-				// Toggle/Remove Todo
-				dispatchIntent(
-					toggleTodo, 
-					removeTodo, 
-					this.binder.items, 
-					event.target
-				);
-				return;
-			}
-		}
-
 	}
 
 	return TodosView;

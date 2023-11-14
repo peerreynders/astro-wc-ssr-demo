@@ -1,6 +1,5 @@
 // @ts-check
 // file: src/client/entry.js
-
 import { define } from './components/registry';
 import { makeTodoActions } from './app/browser';
 import { makeApp } from './app/index';

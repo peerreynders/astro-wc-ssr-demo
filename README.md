@@ -6,9 +6,9 @@ The following will discuss a recipe for implementing server rendered Web Compone
 
 Lack of standardized SSR support is one of the greatest drawbacks of Web Components, especially as we are in the process of transitioning into [Generation 3](https://igor.dev/posts/experiences-web-frameworks-future-me/#return-to-server).
 Granted some frameworks aim to support SSR ([Lit](https://lit.dev/docs/ssr/overview/) in particular but it still requires JS on the server) but at that point *one has already adopted a framework* which is acceptable if that is the shop framework.
-Even when it comes to μ-frontends, the going recommendation is to stick to one, [single framework (and version)](https://youtu.be/A3n1n5QRmF0?t=1657). 
+Even when it comes to μ-frontends, the going recommendation is to stick to one, [single framework (and version)](https://youtu.be/A3n1n5QRmF0?t=1657).
 
-The argument that any Web Component based framework will be comparatively [longer-lived](https://jakelazaroff.com/words/web-components-will-outlive-your-javascript-framework/) because "it's based on a platform standard" is also more than a little bit disingenuous ([AppCache](https://web.archive.org/web/20210603132501/https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache) ([2018](https://groups.google.com/a/chromium.org/g/blink-dev/c/FvM-qo7BfkI/m/0daqyD8kCQAJ)) would like a word); Polymer in particular went trough a number of major revisions over the years (1.0 (2015), 2.0 (2017), 3.0 (2018), lit-html (2017), Lit 1.0 (2019), Lit 2.0 (2021), Lit 3.0 (2023)).
+The argument that any Web Component based framework will be comparatively [longer-lived](https://jakelazaroff.com/words/web-components-will-outlive-your-javascript-framework/) because "it's based on a platform standard" is also more than a little bit disingenuous ([AppCache](https://web.archive.org/web/20210603132501/https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache) ([2018](https://groups.google.com/a/chromium.org/g/blink-dev/c/FvM-qo7BfkI/m/0daqyD8kCQAJ)) would like a word); Polymer in particular went through a number of major revisions over the years (1.0 (2015), 2.0 (2017), 3.0 (2018), lit-html (2017), Lit 1.0 (2019), Lit 2.0 (2021), Lit 3.0 (2023)).
 
 This particular example is based on a reworked version of the [Web Components: From zero to hero](https://thepassle.github.io/webcomponents-from-zero-to-hero/) tutorial. Like most tutorials of this kind, it's shamelessly component-oriented ([centric](https://twitter.com/acemarke/status/1056669495354421249)) and by extension [client-side rendered (CSR)](https://www.patterns.dev/react/client-side-rendering) focused (very [pre-2016](https://github.com/vercel/next.js/releases/tag/1.0.0) and firmly rooted in the traditions of the [desktop web](https://youtu.be/wsdPeC86OH0?t=472)). *Continued in [More Thoughts on Web Components](#more-thoughts-on-web-components).*
 
@@ -50,7 +50,7 @@ const { title, todoItems } = Astro.props;
 </todos-view>
 ```
 
-[Astro components](https://docs.astro.build/en/core-concepts/astro-components/) are essentially server rendered partials using a JSX-like (but more HTML adjacent) templating syntax that is preceded by some preparatory JavaScript (or TypeScript in this case) code in the frontmatter. `todos-view` is the Web Component which is clearly passed some child content. The component starts to manage any relevant parts of the light DOM (i.e. normal DOM, as opposed to [shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM)) that it contains.
+[Astro components](https://docs.astro.build/en/core-concepts/astro-components/) are essentially server rendered partials using a JSX-like (but more [HTML adjacent](https://docs.astro.build/en/core-concepts/astro-syntax/#differences-between-astro-and-jsx)) templating syntax that is preceded by some preparatory JavaScript (or TypeScript in this case) code in the frontmatter. `todos-view` is the Web Component which is clearly passed some child content. The component starts to manage any relevant parts of the light DOM (i.e. normal DOM, as opposed to [shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM)) that it contains.
 
 > FYI: A `js:` prefix identifies a class name as a [JavaScript hook](https://cssguidelin.es/#javascript-hooks); i.e. it's selected and/or manipulated by JS code, so it shouldn't be renamed during a pure CSS refactor. The `c-` prefix [namespaces](https://csswizardry.com/2015/08/bemit-taking-the-bem-naming-convention-a-step-further/#namespaces) the class name as being (visual design) component-related (design system and UI component boundaries don't always coincide). 
 
@@ -134,7 +134,7 @@ Each template can be easily selected via its `id`. Given that there is only one 
 
 ### 4. Select the template inside the Web Component module.
 
-Most modern JavaScript is loaded [`async`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#async), [`defer`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#defer) or [`type="module"`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#module), i.e. by the time the document has already been fully parsed. So the Web Component module can be initialized (`todosView.initialize()`) when the bundle entry code is run:
+Most modern JavaScript is loaded [`async`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#async), [`defer`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#defer) or [`type="module"`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#module), i.e. by the time the document has already been fully parsed. So the Web Component module can be initialized (`todosView.initialize()`) when the bundle entry code is run (so there is no need to deal with [`readyState`, `DOMContentLoaded`](https://developer.mozilla.org/en-US/docs/Web/API/Document/DOMContentLoaded_event#checking_whether_loading_is_already_complete)):
 
 ```JavaScript
 // @ts-check
@@ -156,14 +156,15 @@ function assembleApp() {
  * @returns { void }
  */
 function hookupUI(app) {
-  todosView.initialize({
-    addTodo: app.addTodo,
-    removeTodo: app.removeTodo,
-    toggleTodo: app.toggleTodo,
-    subscribeTodoEvent: app.subscribeTodoEvent,
-  });
-
-  customElements.define(todosView.NAME, todosView.TodosView);
+  customElements.define(
+    todosView.NAME,
+    todosView.makeClass({
+      addTodo: app.addTodo,
+      removeTodo: app.removeTodo,
+      toggleTodo: app.toggleTodo,
+      subscribeTodoEvent: app.subscribeTodoEvent,
+    })
+  );
 }
 
 hookupUI(assembleApp());
@@ -182,7 +183,8 @@ const TEMPLATE_ITEM_ID = 'template-todo-item';
 
 // … 
 
-function getItemBlank() {
+/** @returns {() => HTMLLIElement} */
+function makeCloneBlankItem() {
   const template = document.getElementById(TEMPLATE_ITEM_ID);
   if (!(template instanceof HTMLTemplateElement))
     throw Error(`${TEMPLATE_ITEM_ID} template not found`);
@@ -191,40 +193,105 @@ function getItemBlank() {
   if (!(root instanceof HTMLLIElement))
     throw new Error(`Unexpected ${TEMPLATE_ITEM_ID} template root`);
 
-  return root;
+  return function cloneBlankItem() {
+    return /** @type {HTMLLIElement} */ (root.cloneNode(true));
+  };
 }
 
 // … 
 
-/** @typedef { object } Module
- *  @property { AddTodo } addTodo
- *  @property { RemoveTodo } removeTodo
- *  @property { ToggleTodo } toggleTodo
- *  @property { SubscribeTodoEvent } subscribeTodoEvent
- *  @property { HTMLLIElement } itemBlank
- *  @property { Map<TodosView, Binder> } instances
- */
-
-/** @type {Module | undefined} */
-let module;
-
 /** @param {{
- *  addTodo: AddTodo;
- *  removeTodo: RemoveTodo;
- *  toggleTodo: ToggleTodo;
- *  subscribeTodoEvent: SubscribeTodoEvent;
- * }} depend
- */
-function initialize({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
-  module = {
-    addTodo,
-    removeTodo,
-    toggleTodo,
-    subscribeTodoEvent,
-    itemBlank: getItemBlank(),
-    instances: new Map(),
-  };
+  *   addTodo: AddTodo;
+  *   removeTodo: RemoveTodo;
+  *   toggleTodo: ToggleTodo;
+  *   subscribeTodoEvent: SubscribeTodoEvent;
+  * }} depend
+  */
+function makeClass({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
+  const cloneBlankItem = makeCloneBlankItem();
+
+  /** @param {HTMLInputElement} title
+    */
+  async function dispatchAddTodo(title) {
+    await addTodo(title.value);
+    title.value = '';
+  }
+
+  /** @this Binder
+    * @param {Event} event
+    */
+  function handleEvent(event) {
+    if (event.type === 'click') {
+      if (event.target === this.newTitle) {
+        // Add new todo
+        event.preventDefault();
+        if (this.title.value.length < 1) return;
+
+        dispatchAddTodo(this.title);
+        return;
+      }
+
+      // Toggle/Remove Todo
+      dispatchIntent(toggleTodo, removeTodo, this.items, event.target);
+      return;
+    }
+  }
+
+  class TodosView extends HTMLElement {
+    /** @type {Binder | undefined} */
+    binder;
+
+    constructor() {
+      super();
+    }
+
+    connectedCallback() {
+      const title = this.querySelector(SELECTOR_TITLE);
+      if (!(title instanceof HTMLInputElement))
+        throw new Error('Unable to bind to todo "title" input');
+
+      const newTitle = this.querySelector(SELECTOR_NEW);
+      if (!(newTitle instanceof HTMLButtonElement))
+        throw new Error('Unable to bind to "new" todo button');
+
+      const list = this.querySelector(SELECTOR_LIST);
+      if (!(list instanceof HTMLUListElement))
+        throw new Error('Unable to bind to todo list');
+
+      /** @type {Binder} */
+      const binder = {
+        root: this,
+        title,
+        newTitle,
+        list,
+        items: fromUL(list),
+        handleEvent,
+        unsubscribeTodoEvent: undefined,
+      };
+
+      binder.unsubscribeTodoEvent = subscribeTodoEvent(
+        makeTodoNotify(cloneBlankItem, binder)
+      );
+      binder.newTitle.addEventListener('click', binder);
+      binder.list.addEventListener('click', binder);
+      this.binder = binder;
+    }
+
+    disconnectedCallback() {
+      if (!this.binder) return;
+
+      const binder = this.binder;
+      this.binder = undefined;
+      binder.list.removeEventListener('click', binder);
+      binder.newTitle.removeEventListener('click', binder);
+      binder.unsubscribeTodoEvent?.();
+    }
+  }
+
+  return TodosView;
 }
+
+export { NAME, makeClass };
 ```
 
 ### 5. When needed, clone the blank content and “fill in the blanks”. 
@@ -239,18 +306,25 @@ Once the `blank` content is cloned, simple selectors can locate the relevant ele
 
 const SELECTOR_LABEL = 'label';
 const SELECTOR_CHECKBOX = 'input[type=checkbox]';
+const SELECTOR_REMOVE = 'button';
 
 // … 
 
-/** @param {HTMLLIElement} blank
- * @param {Todo} todo
- */
-function fillItem(blank, todo) {
-  const root = /** @type{HTMLLIElement} */ (blank.cloneNode(true));
+/**  @param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
+  *  @param {Todo} todo
+  *  @returns {[root: HTMLLIElement, binder: ItemBinder]}
+  */
+function fillItem(cloneBlankItem, todo) {
+  const root = cloneBlankItem();
   const label = root.querySelector(SELECTOR_LABEL);
   const checkbox = root.querySelector(SELECTOR_CHECKBOX);
+  const remove = root.querySelector(SELECTOR_REMOVE);
   if (
-    !(label instanceof HTMLLabelElement && checkbox instanceof HTMLInputElement)
+    !(
+      label instanceof HTMLLabelElement &&
+      checkbox instanceof HTMLInputElement &&
+      remove instanceof HTMLButtonElement
+    )
   )
     throw new Error('Unexpected <li> shape for todo');
 
@@ -259,8 +333,59 @@ function fillItem(blank, todo) {
   label.dataset['id'] = todo.id;
   if (todo.title) label.appendChild(new Text(todo.title));
 
-  return root;
+  const binder = makeItemBinder(root, checkbox, remove, todo.id, todo.index);
+
+  return [root, binder];
 }
+
+// … 
+
+/**  @param {ItemCollection} binders
+  *  @param {ItemBinder} newBinder
+  *  @returns { HTMLLIElement | undefined }
+  */
+function spliceItemBinder(binders, newBinder) {
+  const last = binders.length - 1;
+  // Scan collection in reverse bailing on the
+  // first index property smaller than the
+  // new index property
+  // (item binders are in ascending index property order)
+  let i = last;
+  for (; i > -1; i -= 1) if (binders[i].index < newBinder.index) break;
+
+  if (i < 0) {
+    binders[0] = newBinder;
+    return undefined;
+  }
+
+  const before = binders[i].root;
+  if (i === last) {
+    binders.push(newBinder);
+    return before;
+  }
+
+  binders.splice(i, 0, newBinder);
+  return before;
+}
+
+// … 
+
+/**  @param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
+  *  @param {HTMLUListElement} list
+  *  @param {ItemCollection} binders
+  *  @param {Readonly<Todo>} todo
+  */
+function addItem(cloneBlankItem, list, binders, todo) {
+  const [item, binder] = fillItem(cloneBlankItem, todo);
+  const before = spliceItemBinder(binders, binder);
+  if (before) {
+    before.after(item);
+  } else {
+    list.prepend(item);
+  }
+}
+
+// … 
 ```
 
 ### 6. Components don't communicate with each other but only with the client side app.
@@ -270,7 +395,48 @@ While this example only has one single Web Component the guideline still applies
 - To be continued
 
 ## Some Thoughts on the Original Example
-- To be continued
+
+From a [recent article](https://adactio.com/journal/20618):
+
+> HTML web components encourage a mindset of augmentation instead.
+
+This is about [progressive enhancement](https://alistapart.com/article/understandingprogressiveenhancement/), i.e. rendering HTML on the server, letting the browser build the DOM without JS and then handing the completed DOM over to JavaScript *to augment*. A more appropriate name for *progressively enhanced elements* would have been [Custom Elements](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements)—a term already reserved to distinguish between *customized built-in elements* and *autonomous custom elements*.
+
+Customized build-in elements are the closest to the notion of *progressively enhanced elements* but [WebKit has no intent on supporting them](https://github.com/WebKit/standards-positions/issues/97) (though this can be mitigated with [`builtin-elements`](https://github.com/WebKit/standards-positions/issues/97)).
+
+This is perhaps why Web Component tutorials primarily focus on *autonomous custom elements*. Consequently Web Component tutorials (and proponents) seem to focus on using *autonomous custom elements* for implementing fully client-side rendered UI components, serving as an alternative to [framework components](https://docs.astro.build/en/core-concepts/framework-components/).
+
+However:
+
+> [Rich Harris](https://medium.com/@Rich_Harris), the author of Svelte, made the claim that “Frameworks aren’t there to organize your code, but to organize your mind”. **I feel this way about Components**. There are always going to be boundaries and modules to package up to keep code encapsulated and re-usable. **Those boundaries are always going to have a cost, so I believe we are best served to optimize for those boundaries rather than introducing our own**.
+
+Source: [The Real Cost of UI Components (2019)](https://betterprogramming.pub/the-real-cost-of-ui-components-6d2da4aba205#36a2)
+
+- Browsers load pages, not components (i.e. browsers don't benefit from components, while being incredibly efficient at transforming HTML to a DOM-tree and styling the page based on [CSS rulesets](https://developer.mozilla.org/en-US/docs/Web/CSS/Syntax#css_rulesets)).
+- Natural boundaries of visual design, DOM subtrees, and application capability units don't necessarily coincide.
+- Proximity of entities within the UI tree doesn't necessarily correlate with the necessary entity communication patterns. 
+
+I.e. component-orientation is largely about developer convenience and enabling [speculative reuse](https://blog.codinghorror.com/rule-of-three/) rather than producing a high (UX) value end product.
+
+From the HTML specification [4.4.6 The `ul` element](https://html.spec.whatwg.org/multipage/grouping-content.html#the-ul-element):
+
+> [**Content model**](https://html.spec.whatwg.org/multipage/dom.html#concept-element-content-model):
+> - Zero or more [`li`](https://html.spec.whatwg.org/multipage/grouping-content.html#the-li-element) and [script-supporting](https://html.spec.whatwg.org/multipage/dom.html#script-supporting-elements-2) elements.
+
+and [4.4.8 The `li` element](https://html.spec.whatwg.org/multipage/grouping-content.html#the-li-element):
+
+> [Contexts in which this element can be used](https://html.spec.whatwg.org/multipage/dom.html#concept-element-contexts):
+> - Inside [`ol`](https://html.spec.whatwg.org/multipage/grouping-content.html#the-ol-element) elements.
+> - Inside [`ul`](https://html.spec.whatwg.org/multipage/grouping-content.html#the-ul-element) elements.
+> - Inside [`menu`](https://html.spec.whatwg.org/multipage/grouping-content.html#the-menu-element) elements. 
+
+i.e. the `<li>` tags should be direct children to the `<ul>` tag.
+
+Inspecting the resulting DOM tree one finds that the `<ul>` element's direct children aren't `<li>` elements but `<to-do-item>` elements which later in their [`shadowroot`](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot) contain the `<li>` element. But technically there never was any HTML involved in the first place because everything was created by the Web Components JavaScript.
+
+However the phrasing of the HTML spec strongly suggests that the `<li>` element is *tighly coupled* to the list that contains it. So in terms of *boundaries* the list and its items should be managed by the same entity; it's only the content of the `<li>` that may need to be managed separately; of the content the completed checkbox and remove button still belong to list management. So the `<label>` containing the todo title is the only item content left (without any behaviour/interactivity). Given the coupling in the names (`to-do-app`, `to-do-item`) I decided to just collapse the two into `todos-view`.
+
+A component that could be factored out is a "new todo input" which could also double as a busy indicator. This way `todo-view` could focus on removing unwanted items from the list, adding new items (arriving from the server) to the list and (un)completing existing items.
 
 ## More Thoughts on Web Components
 - [Eshewing Shadow DOM (2019)](https://every-layout.dev/blog/eschewing-shadow-dom/)

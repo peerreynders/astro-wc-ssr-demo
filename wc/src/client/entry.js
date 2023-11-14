@@ -1,6 +1,5 @@
 // @ts-check
 // file: src/client/entry.js
-
 import { makeTodoActions } from './app/browser';
 import { makeApp } from './app/index';
 import * as todosView from './components/todos-view';
