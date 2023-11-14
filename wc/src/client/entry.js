@@ -18,14 +18,15 @@ function assembleApp() {
  * @returns { void }
  */
 function hookupUI(app) {
-	todosView.initialize({
-		addTodo: app.addTodo,
-		removeTodo: app.removeTodo,
-		toggleTodo: app.toggleTodo,
-		subscribeTodoEvent: app.subscribeTodoEvent,
-	});
-
-	customElements.define(todosView.NAME, todosView.TodosView);
+	customElements.define(
+		todosView.NAME,
+		todosView.makeClass({
+			addTodo: app.addTodo,
+			removeTodo: app.removeTodo,
+			toggleTodo: app.toggleTodo,
+			subscribeTodoEvent: app.subscribeTodoEvent,
+		})
+	);
 }
 
 hookupUI(assembleApp());
