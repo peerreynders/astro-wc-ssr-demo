@@ -7,14 +7,13 @@ interface Props {
 }
 
 const todo = Astro.props.todo;
-const [todoId, title, index, checked] = todo
-	? [todo.id, todo.title, String(todo.index), todo.completed ? '' : undefined]
-	: ['', '', '', undefined];
+const [todoId, index, checked] = todo
+	? [todo.id, String(todo.index), todo.completed ? '' : undefined]
+	: ['', '', undefined];
 ---
 
 <li class="c-todos-view__item" data-index={index}>
-	<label data-id={todoId}>
-		<input type="checkbox" checked={checked} />{title}
-	</label>
+	<input type="checkbox" checked={checked} id={todoId} />
+	<slot />
 	<button>❌</button>
 </li>

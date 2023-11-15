@@ -394,6 +394,320 @@ While this example only has one single Web Component the guideline still applies
 
 - To be continued
 
+### Factoring Out TodoContent
+
+For the sake of demonstration lets factor out the todo item content from `todos-view`. As there is no behaviour associated with the content a Web Component isn't necessary. However we need to render the content separately from the `<li>`:
+
+```Astro
+---
+// file: src/components/todo-item.astro
+import type { Todo } from '../types';
+
+interface Props {
+  todo?: Todo;
+}
+
+const todo = Astro.props.todo;
+const [todoId, title] = todo ? [todo.id, todo.title] : ['', ''];
+---
+
+<label class="js:c-todo-content" for={todoId}>{title}</label>
+```
+
+The todo's `id` is now stored in the `label`'s [`for` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/for) linking it to the sibling `input`'s `id`. The class name `js:c-todo-content` is also added to make it easy to select the root of the content. As this will be included with the templates, the component has to be able to render a *blank* variant of itself.
+
+The content is removed from `todo-item.astro`:
+
+```Astro
+---
+// file: src/components/todo-item.astro
+import type { Todo } from '../types';
+
+interface Props {
+  todo?: Todo;
+}
+
+const todo = Astro.props.todo;
+const [todoId, index, checked] = todo ?
+  [todo.id, String(todo.index), todo.completed ? '' : undefined] :
+  ['', '', undefined];
+---
+
+<li class="c-todos-view__item" data-index={index}>
+  <input type="checkbox" checked={checked} id={todoId} />
+  <slot />
+  <button>❌</button>
+</li>
+```
+
+The content has been replaced with a [`slot`](https://docs.astro.build/en/core-concepts/astro-components/#slots). Now `todos-view.astro` is responsible for providing the content:
+
+```Astro
+---
+// file: src/components/todos-view.astro
+import type { Todo } from '../types';
+import TodoContent from './todo-content.astro';
+import TodoItem from './todo-item.astro';
+
+interface Props {
+  title: string;
+  todoItems: Todo[];
+}
+
+const { title, todoItems } = Astro.props;
+---
+
+<todos-view>
+  <h3>{title}</h3>
+  <br />
+  <h1>To do</h1>
+  <form>
+    <input
+      name="todo-title"
+      type="text"
+      placeholder="Add a new to do"
+      class="js:c-todos-view__title"
+    />
+    <button class="js:c-todos-view__new">✅</button>
+  </form>
+  <ul class="js:c-todos-view__list">
+    {
+      todoItems.map((todo) => (
+        <TodoItem {todo}>
+          <TodoContent {todo} />
+        </TodoItem>
+      ))
+    }
+  </ul>
+</todos-view>
+```
+
+The content blank has to be included with the page templates:
+
+```Astro
+---
+// file: src/templates/main-templates.astro
+import TodoItem from '../components/todo-item.astro';
+import TodoContent from '../components/todo-content.astro';
+---
+
+<template id="template-todo-item">
+  <TodoItem />
+</template>
+<template id="template-todo-content">
+  <TodoContent />
+</template>
+```
+
+The client side module creates the support capabilities that `todos-view` can delegate to:
+
+```JavaScript
+// @ts-check
+// file: src/client/components/todo-content.js
+
+/** @typedef {import('../index').Todo} Todo */
+
+const NAME = 'todo-content';
+const TEMPLATE_CONTENT_ID = 'template-todo-content';
+const SELECTOR_ROOT = '.js\\:c-todo-content';
+
+/** @returns {() => HTMLLabelElement} */
+function makeCloneContent() {
+  const template = document.getElementById(TEMPLATE_CONTENT_ID);
+  if (!(template instanceof HTMLTemplateElement))
+    throw Error(`${TEMPLATE_CONTENT_ID} template not found`);
+
+  const root = template.content.firstElementChild;
+  if (!(root instanceof HTMLLabelElement))
+    throw new Error(`Unexpected ${TEMPLATE_CONTENT_ID} template root`);
+
+  return function cloneContent() {
+    return /** @type {HTMLLabelElement} */ (root.cloneNode(true));
+  };
+}
+
+/** @param {ReturnType<typeof makeCloneContent>} cloneContent
+ *  @param {Todo} todo
+ *  @returns {HTMLLabelElement}
+ */
+function fillContent(cloneContent, todo) {
+  const root = cloneContent();
+
+  root.htmlFor = todo.id;
+  if (todo.title) root.appendChild(new Text(todo.title));
+
+  return root;
+}
+
+/** @type {import('../types').FromTodoContent} */
+function fromContent(root) {
+  if (!(root instanceof HTMLLabelElement)) return [];
+
+  const id = root.htmlFor ?? '';
+  if (id.length < 1) return [];
+
+  const text = root.lastChild;
+  const title = text && text instanceof Text ? text.nodeValue ?? '' : '';
+
+  return [id, title];
+}
+
+// There is no behavior associated with this content
+// so a Web Component isn't necessary
+//
+
+function makeSupport() {
+  const cloneContent = makeCloneContent();
+  /** @type {(todo: Todo) => HTMLElement} */
+  const render = (todo) => fillContent(cloneContent, todo);
+
+  return {
+    render,
+    fromContent,
+  };
+}
+
+export { NAME, SELECTOR_ROOT, makeSupport };
+```
+
+`SELECTOR_ROOT` is exported to make it easier for `todos-view` to locate the content inside a `<li>` when it needs to extract information from it. `fromContent()` can then extract the todo's ID and title when it is given the content root. `makeSupport()` returns an object with `fromContent` and `render`. `makeSupport()` gives the entry script control *when* the support functions are created. In this case `makeSupport()` should only be called once the DOM has been fully parsed as `makeCloneContent` accesses the `template-todo-content` from the page.
+
+The entry script is responsible for injecting the support functions into `todos-view`:
+
+```JavaScript
+// @ts-check
+// file: src/client/entry.js
+import { makeTodoActions } from './app/browser';
+import { makeApp } from './app/index';
+import * as todoContent from './components/todo-content';
+import * as todosView from './components/todos-view';
+
+function assembleApp() {
+  const actions = makeTodoActions('/api/todos');
+  return makeApp({
+    addTodo: actions.addTodo,
+    removeTodo: actions.removeTodo,
+    toggleTodo: actions.toggleTodo,
+  });
+}
+
+/** @param { ReturnType<typeof makeApp> } app
+ *  @returns { void }
+ */
+function hookupUI(app) {
+  const itemSupport = todoContent.makeSupport();
+
+  customElements.define(
+    todosView.NAME,
+    todosView.makeClass({
+      content: {
+        render: itemSupport.render,
+        from: itemSupport.fromContent,
+        selector: todoContent.SELECTOR_ROOT,
+      },
+      addTodo: app.addTodo,
+      removeTodo: app.removeTodo,
+      toggleTodo: app.toggleTodo,
+      subscribeTodoEvent: app.subscribeTodoEvent,
+    })
+  );
+}
+
+hookupUI(assembleApp());
+```
+
+The new `content` object provides `todos-view` with the tools to
+- find the content in a `<li>` (`content.selector`)
+- extract the `id` and `title` from the content (`content.from`)
+- render the content from a `todo` (`content.render`)
+
+This leads the  following updates:
+
+```JavaScript
+// file: src/components/todos-view.js
+
+// … 
+
+/** @param {FromTodoContent} fromContent
+ *  @param {string} contentSelector
+ *  @param {HTMLUListElement} list
+ *  @returns {ItemCollection}
+ */
+function fromUL(fromContent, contentSelector, list) {
+  const items = list.children;
+
+  /** @type {ItemCollection} */
+  const binders = [];
+  for (let i = 0; i < items.length; i += 1) {
+    const root = items.item(i);
+    if (!(root instanceof HTMLLIElement)) continue;
+
+    const content = root.querySelector(contentSelector);
+    if (!(content instanceof HTMLElement)) continue;
+
+    const [id] = fromContent(content);
+    if (id === undefined) continue;
+
+    const value = root.dataset['index'];
+    const index = value ? parseInt(value, 10) : NaN;
+    if (Number.isNaN(index)) continue;
+
+    const completed = root.querySelector(SELECTOR_CHECKBOX);
+    if (!(completed instanceof HTMLInputElement)) continue;
+
+    const remove = root.querySelector(SELECTOR_REMOVE);
+    if (!(remove instanceof HTMLButtonElement)) continue;
+
+    binders.push(makeItemBinder(root, completed, remove, id, index));
+  }
+
+  return binders.sort(byIndexAsc);
+}
+```
+
+`fromUL()` is passed `contentSelector` to help find the selector root and `fromContent` to extract the information from it.
+
+```JavaScript
+// file: src/components/todos-view.js
+
+// … 
+
+/** @param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
+ *  @param {TodoRender} contentRender
+ *  @param {Todo} todo
+ *  @returns {[root: HTMLLIElement, binder: ItemBinder]}
+ */
+function fillItem(cloneBlankItem, contentRender, todo) {
+  const root = cloneBlankItem();
+  const checkbox = root.querySelector(SELECTOR_CHECKBOX);
+  const remove = root.querySelector(SELECTOR_REMOVE);
+  if (
+    !(
+      checkbox instanceof HTMLInputElement &&
+      remove instanceof HTMLButtonElement
+    )
+  )
+    throw new Error('Unexpected <li> shape for todo');
+
+  const content = contentRender(todo);
+
+  root.dataset['index'] = String(todo.index);
+  checkbox.checked = todo.completed;
+  checkbox.id = todo.id;
+  remove.before(content);
+
+  const binder = makeItemBinder(root, checkbox, remove, todo.id, todo.index);
+
+  return [root, binder];
+}
+
+```
+`fillItem()` is passed `contentRender` to render the content right [`before`](https://developer.mozilla.org/en-US/docs/Web/API/Element/before) the remove button.
+
+### Factoring Out TodoNew
+
+- To be continued
+
 ## Some Thoughts on the Original Example
 
 From a [recent article](https://adactio.com/journal/20618):
@@ -402,13 +716,13 @@ From a [recent article](https://adactio.com/journal/20618):
 
 This is about [progressive enhancement](https://alistapart.com/article/understandingprogressiveenhancement/), i.e. rendering HTML on the server, letting the browser build the DOM without JS and then handing the completed DOM over to JavaScript *to augment*. A more appropriate name for *progressively enhanced elements* would have been [Custom Elements](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements)—a term already reserved to distinguish between *customized built-in elements* and *autonomous custom elements*.
 
-Customized build-in elements are the closest to the notion of *progressively enhanced elements* but [WebKit has no intent on supporting them](https://github.com/WebKit/standards-positions/issues/97) (though this can be mitigated with [`builtin-elements`](https://github.com/WebKit/standards-positions/issues/97)).
+Customized build-in elements are the closest to the notion of *progressively enhanced elements* but [WebKit has no intent on supporting them](https://github.com/WebKit/standards-positions/issues/97) (though this can be mitigated with [`builtin-elements`](https://github.com/WebReflection/builtin-elements).
 
 This is perhaps why Web Component tutorials primarily focus on *autonomous custom elements*. Consequently Web Component tutorials (and proponents) seem to focus on using *autonomous custom elements* for implementing fully client-side rendered UI components, serving as an alternative to [framework components](https://docs.astro.build/en/core-concepts/framework-components/).
 
 However:
 
-> [Rich Harris](https://medium.com/@Rich_Harris), the author of Svelte, made the claim that “Frameworks aren’t there to organize your code, but to organize your mind”. **I feel this way about Components**. There are always going to be boundaries and modules to package up to keep code encapsulated and re-usable. **Those boundaries are always going to have a cost, so I believe we are best served to optimize for those boundaries rather than introducing our own**.
+> [Rich Harris](https://medium.com/@Rich_Harris), the author of Svelte, made the claim that “Frameworks aren’t there to organize your code, but to organize your mind”. **I feel this way about Components**. There are always going to be boundaries and modules to package up to keep code encapsulated and re-usable. **Those boundaries are always going to have a cost, so I believe we are best served to optimize for those boundaries rather than introducing our own*
 
 Source: [The Real Cost of UI Components (2019)](https://betterprogramming.pub/the-real-cost-of-ui-components-6d2da4aba205#36a2)
 
@@ -432,11 +746,11 @@ and [4.4.8 The `li` element](https://html.spec.whatwg.org/multipage/grouping-con
 
 i.e. the `<li>` tags should be direct children to the `<ul>` tag.
 
-Inspecting the resulting DOM tree one finds that the `<ul>` element's direct children aren't `<li>` elements but `<to-do-item>` elements which later in their [`shadowroot`](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot) contain the `<li>` element. But technically there never was any HTML involved in the first place because everything was created by the Web Components JavaScript.
+Inspecting the resulting DOM tree one finds that the `<ul>` element's direct children aren't `<li>` elements but `<to-do-item>` elements which later in their [`shadowroot`](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot) contain the `<li>` element. This could be avoided with *customized built-in elements* and the [`is` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/is) (… but [Safari](https://caniuse.com/custom-elementsv1); [pony-fill](https://github.com/WebReflection/builtin-elements)). But technically there never was any HTML involved in the first place because everything was created by the Web Components JavaScript.
 
-However the phrasing of the HTML spec strongly suggests that the `<li>` element is *tighly coupled* to the list that contains it. So in terms of *boundaries* the list and its items should be managed by the same entity; it's only the content of the `<li>` that may need to be managed separately; of the content the completed checkbox and remove button still belong to list management. So the `<label>` containing the todo title is the only item content left (without any behaviour/interactivity). Given the coupling in the names (`to-do-app`, `to-do-item`) I decided to just collapse the two into `todos-view`.
+However the phrasing of the HTML spec strongly suggests that the `<li>` element is *tighly coupled* to the list that contains it. So in terms of *boundaries* the list and its items should be managed by the same entity; it's only the content of the `<li>` that may need to be managed separately; of the content the completed checkbox and remove button still belong to list management. So the `<label>` containing the todo title is the only item content left (without any behaviour/interactivity). Given the coupling in the names (`to-do-app`, `to-do-item`) I decided to just collapse the two into `todos-view` (though later: [Factoring Out TodoContent](#factoring-out-todocontent)).
 
-A component that could be factored out is a "new todo input" which could also double as a busy indicator. This way `todo-view` could focus on removing unwanted items from the list, adding new items (arriving from the server) to the list and (un)completing existing items.
+A component that could be factored out is a "new todo input" which could also double as a busy indicator (see: [Factoring Out TodoNew](#factoring-out-todonew)). This way `todo-view` could focus on removing unwanted items from the list, adding new items (arriving from the server) to the list and (un)completing existing items.
 
 ## More Thoughts on Web Components
 - [Eshewing Shadow DOM (2019)](https://every-layout.dev/blog/eschewing-shadow-dom/)
