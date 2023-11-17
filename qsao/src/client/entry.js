@@ -25,7 +25,7 @@ function hookupUI(app) {
 			removeTodo: app.removeTodo,
 			toggleTodo: app.toggleTodo,
 			subscribeTodoEvent: app.subscribeTodoEvent,
-		}),
+		})
 	);
 }
 

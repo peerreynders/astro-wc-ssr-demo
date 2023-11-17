@@ -1,5 +1,5 @@
 // @ts-check
-// file: src/client/comments/todo-new.js
+// file: src/client/components/todo-new.js
 
 /** @typedef {import('../app').AddTodo} AddTodo */
 

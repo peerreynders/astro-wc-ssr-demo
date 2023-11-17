@@ -394,6 +394,10 @@ While this example only has one single Web Component the guideline still applies
 
 - To be continued
 
+### Some Observations
+
+- To be continued
+
 ## Factoring Out TodoContent
 
 For the sake of demonstration lets factor out the todo item content from `todos-view`. As there is no behaviour associated with the content a Web Component isn't necessary. However we need to render the content separately from the `<li>`:
@@ -705,7 +709,288 @@ function fillItem(cloneBlankItem, contentRender, todo) {
 `fillItem()` is passed `contentRender` to render the content right [`before`](https://developer.mozilla.org/en-US/docs/Web/API/Element/before) the remove button.
 
 ## Factoring Out TodoNew
-- [ponyfill](https://ponyfoo.com/articles/polyfills-or-ponyfills)
+
+The first step is to extract `TodoNew` from `TodosView`. In this circumstance `TodoNew` doesn't render anything client side but in order to clearly demarcate the boundaries the `todo-new` Astro component is extracted:
+
+```Astro
+---
+// file: src/components/todo-new.astro
+---
+
+<form is="todo-new">
+  <input
+    name="todo-title"
+    type="text"
+    placeholder="Add a new to do"
+    class="js:c-todo-new__title"
+  />
+  <button class="js:c-todo-new__submit">✅</button>
+</form>
+```
+
+While not strictly necessary we'll make this a [customized built-in component](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements#types_of_custom_element) so that we can just use the [`is` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/is) on the `<form>` tag. But this also implies that it won't work on Safari without basing the Web Component on a [ponyfill](https://ponyfoo.com/articles/polyfills-or-ponyfills) (like [`builtin-elements`](https://github.com/WebReflection/builtin-elements)). As we are not accessing anything specific to [`HTMLFormElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement) inside the Web Component, `TodoNew` can be just as easily implemented with an autonomous custom element by wrapping the markup in a `<todo-new>` tag.
+
+The next step is to add the new responsibility to `TodoNew` which first requires a refinement of the app interface.
+
+Updating the `TodoView` Astro component to use `TodoNew`:
+
+```Astro
+---
+// file: src/components/todos-view.astro
+import type { Todo } from '../types';
+import TodoNew from './todo-new.astro';
+import TodoContent from './todo-content.astro';
+import TodoItem from './todo-item.astro';
+
+interface Props {
+  title: string;
+  todoItems: Todo[];
+}
+
+const { title, todoItems } = Astro.props;
+---
+
+<todos-view>
+  <h3>{title}</h3>
+  <br />
+  <h1>To do</h1>
+  <TodoNew />
+  <ul class="js:c-todos-view__list">
+    {
+      todoItems.map((todo) => (
+        <TodoItem {todo}>
+          <TodoContent {todo} />
+        </TodoItem>
+      ))
+    }
+  </ul>
+</todos-view>
+```
+
+On the client side the relevant capabilties are moved to `todo-new.js`:
+
+```JavaScript
+// @ts-check
+// file: src/client/components/todo-new.js
+
+/** @typedef {import('../app').AddTodo} AddTodo */
+
+const NAME = 'todo-new';
+const SELECTOR_TITLE = '.js\\:c-todo-new__title';
+const SELECTOR_NEW = '.js\\:c-todo-new__submit';
+
+/** @typedef {object} Binder
+ *  @property {HTMLFormElement} root
+ *  @property {HTMLInputElement} title
+ *  @property {HTMLButtonElement} submit
+ *  @property {(this: Binder, event: Event) => void} handleEvent
+ */
+
+/** @param {{
+ *   addTodo: AddTodo
+ * }} dependencies
+ */
+function makeDefinition({ addTodo }) {
+  /**  @param {HTMLInputElement} title
+   */
+  async function dispatchAddTodo(title) {
+    await addTodo(title.value);
+    title.value = '';
+  }
+
+  /** @this Binder
+   *  @param {Event} event
+   */
+  function handleEvent(event) {
+    if (event.type === 'click' && event.target === this.submit) {
+      event.preventDefault();
+      if (this.title.value.length < 1) return;
+
+      dispatchAddTodo(this.title);
+      return;
+    }
+  }
+
+  class TodoNew extends HTMLFormElement {
+    /** @type {Binder | undefined} */
+    binder;
+
+    constructor() {
+      super();
+    }
+
+    connectedCallback() {
+      const title = this.querySelector(SELECTOR_TITLE);
+      if (!(title instanceof HTMLInputElement))
+        throw new Error('Unable to bind to "title" input');
+
+      const submit = this.querySelector(SELECTOR_NEW);
+      if (!(submit instanceof HTMLButtonElement))
+        throw new Error('Unable to bind to submit button');
+
+      /** @type {Binder} */
+      const binder = {
+        root: this,
+        title,
+        submit,
+        handleEvent,
+      };
+      binder.submit.addEventListener('click', binder);
+      this.binder = binder;
+    }
+
+    disconnectedCallback() {
+      if (!this.binder) return;
+
+      const binder = this.binder;
+      this.binder = undefined;
+      binder.submit.removeEventListener('click', binder);
+    }
+  }
+
+  return {
+    name: NAME,
+    constructor: TodoNew,
+    options: { extends: 'form' },
+  };
+}
+
+export { makeDefinition };
+```
+
+… so it can be removed from `TodosView`:
+
+```JavaScript
+// file: src/components/todos-view.js
+
+// … 
+
+/**  @param {{
+ *    content: {
+ *      render: TodoRender;
+ *      from: FromTodoContent;
+ *      selector: string;
+ *    };
+ *    removeTodo: RemoveTodo;
+ *    toggleTodo: ToggleTodo;
+ *    subscribeTodoEvent: SubscribeTodoEvent;
+ *  }} dependencies
+ */
+function makeDefinition({
+  content,
+  removeTodo,
+  toggleTodo,
+  subscribeTodoEvent,
+}) {
+  const cloneBlankItem = makeCloneBlankItem();
+
+  /** @this Binder
+   *  @param {Event} event
+   */
+  function handleEvent(event) {
+    if (event.type === 'click') {
+      // Toggle/Remove Todo
+      dispatchIntent(toggleTodo, removeTodo, this.items, event.target);
+      return;
+    }
+  }
+
+  class TodosView extends HTMLElement {
+    /** @type {Binder | undefined} */
+    binder;
+
+    constructor() {
+      super();
+    }
+
+    connectedCallback() {
+      const list = this.querySelector(SELECTOR_LIST);
+      if (!(list instanceof HTMLUListElement))
+        throw new Error('Unable to bind to todo list');
+
+      /** @type {Binder} */
+      const binder = {
+        root: this,
+        list,
+        items: fromUL(content.from, content.selector, list),
+        handleEvent,
+        unsubscribeTodoEvent: undefined,
+      };
+
+      binder.unsubscribeTodoEvent = subscribeTodoEvent(
+        makeTodoNotify(cloneBlankItem, content.render, binder)
+      );
+      binder.list.addEventListener('click', binder);
+      this.binder = binder;
+    }
+
+    disconnectedCallback() {
+      if (!this.binder) return;
+
+      const binder = this.binder;
+      this.binder = undefined;
+      binder.list.removeEventListener('click', binder);
+      binder.unsubscribeTodoEvent?.();
+    }
+  }
+
+  return {
+    name: NAME,
+    constructor: TodosView,
+  };
+}
+
+// … 
+```
+
+Note how `makeDefinition()` no longer needs access to the `addTodo()` dispatch from app. Making the necessary adjustments in the entry point:
+
+```JavaScript
+// @ts-check
+// file: src/client/entry.js
+import { makeTodoActions } from './app/browser';
+import { makeApp } from './app/index';
+import { define } from './components/registry';
+import * as todoNew from './components/todo-new';
+import * as todoContent from './components/todo-content';
+import * as todosView from './components/todos-view';
+
+function assembleApp() {
+  const actions = makeTodoActions('/api/todos');
+  return makeApp({
+    addTodo: actions.addTodo,
+    removeTodo: actions.removeTodo,
+    toggleTodo: actions.toggleTodo,
+  });
+}
+
+/**  @param { ReturnType<typeof makeApp> } app
+ *  @returns { void }
+ */
+function hookupUI(app) {
+  const itemContent = todoContent.makeSupport();
+
+  define(todoNew.makeDefinition({
+    addTodo: app.addTodo,
+  }));
+
+  define(todosView.makeDefinition({
+    content: {
+      render: itemContent.render,
+      from: itemContent.fromContent,
+      selector: itemContent.selectorRoot,
+    },
+    removeTodo: app.removeTodo,
+    toggleTodo: app.toggleTodo,
+    subscribeTodoEvent: app.subscribeTodoEvent,
+  }));
+}
+
+hookupUI(assembleApp());
+```
+
+Now `addTodo` is injected into `TodoNew`. Note how `TodosView` and `TodoNew` are not coupled to one another but rather to the API contract of the app.
+
 - To be continued
 
 ## Some Thoughts on the Original Example

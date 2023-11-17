@@ -292,8 +292,8 @@ function makeSpec({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
 		}
 	}
 
- 	/** @type { Map<Element, Binder> } */
-	const	instances = new Map();
+	/** @type { Map<Element, Binder> } */
+	const instances = new Map();
 
 	/** @type {Spec} */
 	const spec = {
@@ -333,7 +333,7 @@ function makeSpec({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
 
 			instances.set(root, binder);
 		},
-		disconnectedCallback(element){
+		disconnectedCallback(element) {
 			const binder = instances.get(element);
 			if (!binder) return;
 
@@ -341,7 +341,7 @@ function makeSpec({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
 			binder.list.removeEventListener('click', binder);
 			binder.newTitle.removeEventListener('click', binder);
 			binder.unsubscribeTodoEvent?.();
-		}
+		},
 	};
 	return spec;
 }
