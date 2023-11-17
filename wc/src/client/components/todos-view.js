@@ -11,8 +11,6 @@
 
 const NAME = 'todos-view';
 const TEMPLATE_ITEM_ID = 'template-todo-item';
-const SELECTOR_TITLE = '.js\\:c-todos-view__title';
-const SELECTOR_NEW = '.js\\:c-todos-view__new';
 const SELECTOR_LIST = '.js\\:c-todos-view__list';
 const SELECTOR_CHECKBOX = 'input[type=checkbox]';
 const SELECTOR_REMOVE = 'button';
@@ -193,8 +191,6 @@ function dispatchIntent(toggleTodo, removeTodo, binders, target) {
 
 /** @typedef {object} Binder
  *	@property {HTMLElement} root
- *	@property {HTMLInputElement} title
- *	@property {HTMLButtonElement} newTitle
  *	@property {HTMLUListElement} list
  *	@property {ItemCollection} items
  *	@property {(this: Binder, event: Event) => void} handleEvent
@@ -273,42 +269,24 @@ function makeTodoNotify(cloneBlankItem, contentRender, binder) {
  *			from: FromTodoContent;
  *			selector: string;
  *		};
- *		addTodo: AddTodo;
  *		removeTodo: RemoveTodo;
  *		toggleTodo: ToggleTodo;
  *		subscribeTodoEvent: SubscribeTodoEvent;
- *	}} depend
+ *	}} dependencies
  */
-function makeClass({
+function makeDefinition({
 	content,
-	addTodo,
 	removeTodo,
 	toggleTodo,
 	subscribeTodoEvent,
 }) {
 	const cloneBlankItem = makeCloneBlankItem();
 
-	/**	@param {HTMLInputElement} title
-	 */
-	async function dispatchAddTodo(title) {
-		await addTodo(title.value);
-		title.value = '';
-	}
-
 	/** @this Binder
 	 *	@param {Event} event
 	 */
 	function handleEvent(event) {
 		if (event.type === 'click') {
-			if (event.target === this.newTitle) {
-				// Add new todo
-				event.preventDefault();
-				if (this.title.value.length < 1) return;
-
-				dispatchAddTodo(this.title);
-				return;
-			}
-
 			// Toggle/Remove Todo
 			dispatchIntent(toggleTodo, removeTodo, this.items, event.target);
 			return;
@@ -324,14 +302,6 @@ function makeClass({
 		}
 
 		connectedCallback() {
-			const title = this.querySelector(SELECTOR_TITLE);
-			if (!(title instanceof HTMLInputElement))
-				throw new Error('Unable to bind to todo "title" input');
-
-			const newTitle = this.querySelector(SELECTOR_NEW);
-			if (!(newTitle instanceof HTMLButtonElement))
-				throw new Error('Unable to bind to "new" todo button');
-
 			const list = this.querySelector(SELECTOR_LIST);
 			if (!(list instanceof HTMLUListElement))
 				throw new Error('Unable to bind to todo list');
@@ -339,8 +309,6 @@ function makeClass({
 			/** @type {Binder} */
 			const binder = {
 				root: this,
-				title,
-				newTitle,
 				list,
 				items: fromUL(content.from, content.selector, list),
 				handleEvent,
@@ -350,7 +318,6 @@ function makeClass({
 			binder.unsubscribeTodoEvent = subscribeTodoEvent(
 				makeTodoNotify(cloneBlankItem, content.render, binder)
 			);
-			binder.newTitle.addEventListener('click', binder);
 			binder.list.addEventListener('click', binder);
 			this.binder = binder;
 		}
@@ -361,12 +328,14 @@ function makeClass({
 			const binder = this.binder;
 			this.binder = undefined;
 			binder.list.removeEventListener('click', binder);
-			binder.newTitle.removeEventListener('click', binder);
 			binder.unsubscribeTodoEvent?.();
 		}
 	}
 
-	return TodosView;
+	return {
+		name: NAME,
+		constructor: TodosView,
+	};
 }
 
-export { NAME, makeClass };
+export { makeDefinition };

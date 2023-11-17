@@ -3,7 +3,7 @@
 
 /** @typedef {import('../index').Todo} Todo */
 
-const NAME = 'todo-content';
+// const NAME = 'todo-content';
 const TEMPLATE_CONTENT_ID = 'template-todo-content';
 const SELECTOR_ROOT = '.js\\:c-todo-content';
 
@@ -58,9 +58,10 @@ function makeSupport() {
 	const render = (todo) => fillContent(cloneContent, todo);
 
 	return {
-		render,
 		fromContent,
+		render,
+		selectorRoot: SELECTOR_ROOT,
 	};
 }
 
-export { NAME, SELECTOR_ROOT, makeSupport };
+export { makeSupport };

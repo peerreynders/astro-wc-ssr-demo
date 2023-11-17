@@ -2,6 +2,8 @@
 // file: src/client/entry.js
 import { makeTodoActions } from './app/browser';
 import { makeApp } from './app/index';
+import { define } from './components/registry';
+import * as todoNew from './components/todo-new';
 import * as todoContent from './components/todo-content';
 import * as todosView from './components/todos-view';
 
@@ -18,22 +20,22 @@ function assembleApp() {
  *	@returns { void }
  */
 function hookupUI(app) {
-	const itemSupport = todoContent.makeSupport();
+	const itemContent = todoContent.makeSupport();
 
-	customElements.define(
-		todosView.NAME,
-		todosView.makeClass({
-			content: {
-				render: itemSupport.render,
-				from: itemSupport.fromContent,
-				selector: todoContent.SELECTOR_ROOT,
-			},
-			addTodo: app.addTodo,
-			removeTodo: app.removeTodo,
-			toggleTodo: app.toggleTodo,
-			subscribeTodoEvent: app.subscribeTodoEvent,
-		})
-	);
+	define(todoNew.makeDefinition({
+		addTodo: app.addTodo,
+	}));
+
+	define(todosView.makeDefinition({
+		content: {
+			render: itemContent.render,
+			from: itemContent.fromContent,
+			selector: itemContent.selectorRoot,
+		},
+		removeTodo: app.removeTodo,
+		toggleTodo: app.toggleTodo,
+		subscribeTodoEvent: app.subscribeTodoEvent,
+	}));
 }
 
 hookupUI(assembleApp());

@@ -1,6 +1,7 @@
 ---
 // file: src/components/todos-view.astro
 import type { Todo } from '../types';
+import TodoNew from './todo-new.astro';
 import TodoContent from './todo-content.astro';
 import TodoItem from './todo-item.astro';
 
@@ -16,15 +17,7 @@ const { title, todoItems } = Astro.props;
 	<h3>{title}</h3>
 	<br />
 	<h1>To do</h1>
-	<form>
-		<input
-			name="todo-title"
-			type="text"
-			placeholder="Add a new to do"
-			class="js:c-todos-view__title"
-		/>
-		<button class="js:c-todos-view__new">✅</button>
-	</form>
+	<TodoNew />
 	<ul class="js:c-todos-view__list">
 		{
 			todoItems.map((todo) => (

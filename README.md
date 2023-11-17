@@ -394,7 +394,7 @@ While this example only has one single Web Component the guideline still applies
 
 - To be continued
 
-### Factoring Out TodoContent
+## Factoring Out TodoContent
 
 For the sake of demonstration lets factor out the todo item content from `todos-view`. As there is no behaviour associated with the content a Web Component isn't necessary. However we need to render the content separately from the `<li>`:
 
@@ -704,8 +704,8 @@ function fillItem(cloneBlankItem, contentRender, todo) {
 ```
 `fillItem()` is passed `contentRender` to render the content right [`before`](https://developer.mozilla.org/en-US/docs/Web/API/Element/before) the remove button.
 
-### Factoring Out TodoNew
-
+## Factoring Out TodoNew
+- [ponyfill](https://ponyfoo.com/articles/polyfills-or-ponyfills)
 - To be continued
 
 ## Some Thoughts on the Original Example
@@ -727,7 +727,7 @@ However:
 Source: [The Real Cost of UI Components (2019)](https://betterprogramming.pub/the-real-cost-of-ui-components-6d2da4aba205#36a2)
 
 - Browsers load pages, not components (i.e. browsers don't benefit from components, while being incredibly efficient at transforming HTML to a DOM-tree and styling the page based on [CSS rulesets](https://developer.mozilla.org/en-US/docs/Web/CSS/Syntax#css_rulesets)).
-- Natural boundaries of visual design, DOM subtrees, and application capability units don't necessarily coincide.
+- Natural boundaries of visual design, DOM subtrees, and application capability units don't necessarily coincide. Typical UI component boundaries may be *convenient* in terms collocation but often encompass too many responsibilities making them too coarse-grained to be [cohesive](https://vanderburg.org/blog/2011/01/31/cohesion.html); other times UI component boundaries are too fine-grained, leading to [inappropriate intimacy](https://wiki.c2.com/?InappropriateIntimacy). 
 - Proximity of entities within the UI tree doesn't necessarily correlate with the necessary entity communication patterns. 
 
 I.e. component-orientation is largely about developer convenience and enabling [speculative reuse](https://blog.codinghorror.com/rule-of-three/) rather than producing a high (UX) value end product.
@@ -746,7 +746,7 @@ and [4.4.8 The `li` element](https://html.spec.whatwg.org/multipage/grouping-con
 
 i.e. the `<li>` tags should be direct children to the `<ul>` tag.
 
-Inspecting the resulting DOM tree one finds that the `<ul>` element's direct children aren't `<li>` elements but `<to-do-item>` elements which later in their [`shadowroot`](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot) contain the `<li>` element. This could be avoided with *customized built-in elements* and the [`is` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/is) (… but [Safari](https://caniuse.com/custom-elementsv1); [pony-fill](https://github.com/WebReflection/builtin-elements)). But technically there never was any HTML involved in the first place because everything was created by the Web Components JavaScript.
+Inspecting the resulting DOM tree one finds that the `<ul>` element's direct children aren't `<li>` elements but `<to-do-item>` elements which later in their [`shadowroot`](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot) contain the `<li>` element. This could be avoided with *customized built-in elements* and the [`is` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/is) (… but [Safari](https://caniuse.com/custom-elementsv1); [ponyfill](https://github.com/WebReflection/builtin-elements)). But technically there never was any HTML involved in the first place because everything was created by the Web Components JavaScript.
 
 However the phrasing of the HTML spec strongly suggests that the `<li>` element is *tighly coupled* to the list that contains it. So in terms of *boundaries* the list and its items should be managed by the same entity; it's only the content of the `<li>` that may need to be managed separately; of the content the completed checkbox and remove button still belong to list management. So the `<label>` containing the todo title is the only item content left (without any behaviour/interactivity). Given the coupling in the names (`to-do-app`, `to-do-item`) I decided to just collapse the two into `todos-view` (though later: [Factoring Out TodoContent](#factoring-out-todocontent)).
 
