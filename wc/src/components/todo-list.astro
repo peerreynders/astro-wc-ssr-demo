@@ -1,0 +1,26 @@
+---
+// file: src/components/todos-view.astro
+import type { Todo } from '../types';
+import TodoContent from './todo-content.astro';
+import TodoItem from './todo-item.astro';
+
+interface Props {
+	todos: Todo[];
+}
+
+const { todos } = Astro.props;
+---
+
+<ul
+	is="todo-list"
+	class="js:c-todos-view__list js:c-todos-view--disabled"
+	aria-disabled="true"
+>
+	{
+		todos.map((todo) => (
+			<TodoItem {todo}>
+				<TodoContent {todo} />
+			</TodoItem>
+		))
+	}
+</ul>

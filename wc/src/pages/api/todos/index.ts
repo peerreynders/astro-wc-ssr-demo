@@ -1,5 +1,6 @@
 // file: src/pages/api/todos/index.ts
 import { appendTodo } from '../../todos-store';
+import { makeDelay } from '../../../lib/delay';
 import type { APIContext } from 'astro';
 
 async function POST(context: APIContext) {
@@ -14,7 +15,9 @@ async function POST(context: APIContext) {
 		);
 	}
 
-	const todo = await appendTodo(context.locals.sessionId, title);
+	const todo = await appendTodo(context.locals.sessionId, title).then(
+		makeDelay()
+	);
 	return new Response(JSON.stringify(todo), { status: 200 });
 }
 

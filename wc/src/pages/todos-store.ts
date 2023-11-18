@@ -103,7 +103,6 @@ async function selectTodos(id: string) {
 	if (!table) {
 		table = await freshTodos();
 		await storage.setItem<TodosTable>(id, table);
-		console.log('first', id);
 	}
 
 	const todos: Todo[] = Object.values(table.records).sort(byIndexAsc);

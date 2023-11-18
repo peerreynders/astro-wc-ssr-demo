@@ -1,5 +1,12 @@
 // file: src/client/app.ts
 import type { Todo } from './index';
+import { availableStatus } from './app/available-status';
+
+export type AvailableStatus =
+	(typeof availableStatus)[keyof typeof availableStatus];
+
+export type AvailableNext = (status: AvailableStatus) => void;
+export type SubscribeStatus = (next: AvailableNext) => () => void;
 
 // app-to-UI types (UI-bound)
 export type TodoEvent = Readonly<

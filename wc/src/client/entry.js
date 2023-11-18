@@ -5,7 +5,7 @@ import { makeApp } from './app/index';
 import { define } from './components/registry';
 import * as todoNew from './components/todo-new';
 import * as todoContent from './components/todo-content';
-import * as todosView from './components/todos-view';
+import * as todoList from './components/todo-list';
 
 function assembleApp() {
 	const actions = makeTodoActions('/api/todos');
@@ -24,9 +24,10 @@ function hookupUI(app) {
 
 	define(todoNew.makeDefinition({
 		addTodo: app.addTodo,
+		subscribeStatus: app.subscribeStatus,
 	}));
 
-	define(todosView.makeDefinition({
+	define(todoList.makeDefinition({
 		content: {
 			render: itemContent.render,
 			from: itemContent.fromContent,
@@ -34,8 +35,12 @@ function hookupUI(app) {
 		},
 		removeTodo: app.removeTodo,
 		toggleTodo: app.toggleTodo,
+		subscribeStatus: app.subscribeStatus,
 		subscribeTodoEvent: app.subscribeTodoEvent,
 	}));
 }
 
-hookupUI(assembleApp());
+const app = assembleApp();
+hookupUI(app);
+
+app.start();

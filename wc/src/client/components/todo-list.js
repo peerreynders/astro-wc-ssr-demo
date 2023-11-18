@@ -1,19 +1,22 @@
 // @ts-check
 // file: src/client/components/todos-view.js
+import { availableStatus } from '../app/available-status';
 
 /** @typedef {import('../index').Todo} Todo */
+/** @typedef {import('../app').AvailableStatus} AvailableStatus */
 /** @typedef {import('../app').AddTodo} AddTodo */
 /** @typedef {import('../app').RemoveTodo} RemoveTodo */
 /** @typedef {import('../app').ToggleTodo} ToggleTodo */
 /** @typedef {import('../app').TodoEvent} TodoEvent */
+/** @typedef {import('../app').SubscribeStatus} SubscribeStatus */
 /** @typedef {import('../app').SubscribeTodoEvent} SubscribeTodoEvent */
 /** @typedef {import('../types').FromTodoContent} FromTodoContent */
 
-const NAME = 'todos-view';
+const NAME = 'todo-list';
 const TEMPLATE_ITEM_ID = 'template-todo-item';
-const SELECTOR_LIST = '.js\\:c-todos-view__list';
 const SELECTOR_CHECKBOX = 'input[type=checkbox]';
 const SELECTOR_REMOVE = 'button';
+const MODIFIER_DISABLED = 'js:c-todo-list--disabled';
 
 /** @returns {() => HTMLLIElement} */
 function makeCloneBlankItem() {
@@ -24,6 +27,10 @@ function makeCloneBlankItem() {
 	const root = template.content.firstElementChild;
 	if (!(root instanceof HTMLLIElement))
 		throw new Error(`Unexpected ${TEMPLATE_ITEM_ID} template root`);
+
+	// Turn off aria-disabled
+	const element = root.querySelector('[aria-disabled=true]');
+	if (element) element.setAttribute('aria-disabled', 'false');
 
 	return function cloneBlankItem() {
 		return /** @type {HTMLLIElement} */ (root.cloneNode(true));
@@ -190,10 +197,11 @@ function dispatchIntent(toggleTodo, removeTodo, binders, target) {
 }
 
 /** @typedef {object} Binder
- *	@property {HTMLElement} root
- *	@property {HTMLUListElement} list
+ *	@property {HTMLUListElement} root
+ *	@property {boolean} disabled
  *	@property {ItemCollection} items
  *	@property {(this: Binder, event: Event) => void} handleEvent
+ *	@property {(() => void) | undefined} unsubscribeStatus
  *	@property {(() => void) | undefined} unsubscribeTodoEvent
  */
 
@@ -249,7 +257,7 @@ function makeTodoNotify(cloneBlankItem, contentRender, binder) {
 				return addItem(
 					cloneBlankItem,
 					contentRender,
-					binder.list,
+					binder.root,
 					binder.items,
 					event.todo
 				);
@@ -263,6 +271,23 @@ function makeTodoNotify(cloneBlankItem, contentRender, binder) {
 	};
 }
 
+/** @param {Binder} binder
+ * @param {AvailableStatus} status
+ */
+function onAvailable(binder, status) {
+	const disabled = status !== availableStatus.READY;
+	const value = disabled ? 'true' : 'false';
+	binder.disabled = disabled;
+	binder.root.classList.toggle(MODIFIER_DISABLED, disabled);
+	binder.root.setAttribute('aria-disabled', value);
+
+	for (let i = 0; i < binder.items.length; i += 1) {
+		const item = binder.items[i];
+		item.completed.disabled = disabled;
+		item.remove.setAttribute('aria-disabled', value);
+	}
+}
+
 /**	@param {{
  *		content: {
  *			render: TodoRender;
@@ -271,6 +296,7 @@ function makeTodoNotify(cloneBlankItem, contentRender, binder) {
  *		};
  *		removeTodo: RemoveTodo;
  *		toggleTodo: ToggleTodo;
+ * 		subscribeStatus: SubscribeStatus;
  *		subscribeTodoEvent: SubscribeTodoEvent;
  *	}} dependencies
  */
@@ -278,6 +304,7 @@ function makeDefinition({
 	content,
 	removeTodo,
 	toggleTodo,
+	subscribeStatus,
 	subscribeTodoEvent,
 }) {
 	const cloneBlankItem = makeCloneBlankItem();
@@ -286,6 +313,8 @@ function makeDefinition({
 	 *	@param {Event} event
 	 */
 	function handleEvent(event) {
+		if (this.disabled) return;
+
 		if (event.type === 'click') {
 			// Toggle/Remove Todo
 			dispatchIntent(toggleTodo, removeTodo, this.items, event.target);
@@ -293,7 +322,7 @@ function makeDefinition({
 		}
 	}
 
-	class TodosView extends HTMLElement {
+	class TodoList extends HTMLUListElement {
 		/** @type {Binder | undefined} */
 		binder;
 
@@ -302,23 +331,23 @@ function makeDefinition({
 		}
 
 		connectedCallback() {
-			const list = this.querySelector(SELECTOR_LIST);
-			if (!(list instanceof HTMLUListElement))
-				throw new Error('Unable to bind to todo list');
-
 			/** @type {Binder} */
 			const binder = {
 				root: this,
-				list,
-				items: fromUL(content.from, content.selector, list),
+				disabled: this.classList.contains(MODIFIER_DISABLED),
+				items: fromUL(content.from, content.selector, this),
 				handleEvent,
+				unsubscribeStatus: undefined,
 				unsubscribeTodoEvent: undefined,
 			};
 
+			binder.unsubscribeStatus = subscribeStatus((status) =>
+				onAvailable(binder, status)
+			);
 			binder.unsubscribeTodoEvent = subscribeTodoEvent(
 				makeTodoNotify(cloneBlankItem, content.render, binder)
 			);
-			binder.list.addEventListener('click', binder);
+			this.addEventListener('click', binder);
 			this.binder = binder;
 		}
 
@@ -327,14 +356,16 @@ function makeDefinition({
 
 			const binder = this.binder;
 			this.binder = undefined;
-			binder.list.removeEventListener('click', binder);
+			binder.root.removeEventListener('click', binder);
+			binder.unsubscribeStatus?.();
 			binder.unsubscribeTodoEvent?.();
 		}
 	}
 
 	return {
 		name: NAME,
-		constructor: TodosView,
+		constructor: TodoList,
+		options: { extends: 'ul' },
 	};
 }
 
