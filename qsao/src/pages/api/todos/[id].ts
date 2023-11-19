@@ -1,5 +1,6 @@
 // file: src/pages/api/todos/[id].ts
 import { toggleTodo, removeTodo } from '../../todos-store';
+import { makeDelay } from '../../../lib/delay';
 import type { APIContext } from 'astro';
 
 const failureResponse = (message: string, status = 400) =>
@@ -14,7 +15,6 @@ async function remove(id: string, todoId: string) {
 
 async function toggle(id: string, todoId: string, force: boolean | undefined) {
 	const todo = await toggleTodo(id, todoId, force);
-	console.log(force, todo);
 	if (!todo) return failureResponse(`No such todo: "${todoId}"`, 404);
 
 	return new Response(JSON.stringify(todo), { status: 200 });
@@ -30,7 +30,8 @@ async function POST(context: APIContext) {
 	if (intent !== 'remove' && intent !== 'toggle')
 		return failureResponse('"intent" has to be either "remove" or "toggle"');
 
-	if (intent === 'remove') return remove(context.locals.sessionId, todoId);
+	if (intent === 'remove')
+		return remove(context.locals.sessionId, todoId).then(makeDelay());
 
 	// Optional `force` field
 	const force = data.get('force');
@@ -38,7 +39,7 @@ async function POST(context: APIContext) {
 		context.locals.sessionId,
 		todoId,
 		force === 'true' ? true : force === 'false' ? false : undefined
-	);
+	).then(makeDelay());
 }
 
 export { POST };

@@ -2,11 +2,13 @@
 // file: src/client/components/todo-new.js
 import { availableStatus } from '../app/available-status';
 
+/** @typedef { import('../types').QsaoSpec } Spec */
+
 /** @typedef {import('../app').AddTodo} AddTodo */
 /** @typedef {import('../app').AvailableStatus} AvailableStatus */
 /** @typedef {import('../app').SubscribeStatus} SubscribeStatus */
 
-const NAME = 'todo-new';
+const SELECTOR_ROOT = '.js\\:c-todo-new';
 const SELECTOR_TITLE = '.js\\:c-todo-new__title';
 const SELECTOR_NEW = '.js\\:c-todo-new__submit';
 const MODIFIER_DISABLED = 'js:c-todo-new--disabled';
@@ -69,26 +71,26 @@ function makeDefinition({ addTodo, subscribeStatus }) {
 		}
 	}
 
-	class TodoNew extends HTMLFormElement {
-		/** @type {Binder | undefined} */
-		binder;
+	/** @type { Map<Element, Binder> } */
+	const instances = new Map();
 
-		constructor() {
-			super();
-		}
+	/** @type {Spec} */
+	const spec = {	
+		connectedCallback(root) {
+			if (!(root instanceof HTMLFormElement))
+				throw new Error('Unexpected root element type');
 
-		connectedCallback() {
-			const title = this.querySelector(SELECTOR_TITLE);
+			const title = root.querySelector(SELECTOR_TITLE);
 			if (!(title instanceof HTMLInputElement))
 				throw new Error('Unable to bind to "title" input');
 
-			const submit = this.querySelector(SELECTOR_NEW);
+			const submit = root.querySelector(SELECTOR_NEW);
 			if (!(submit instanceof HTMLButtonElement))
 				throw new Error('Unable to bind to submit button');
 
 			/** @type {Binder} */
 			const binder = {
-				root: this,
+				root,
 				title,
 				submit,
 				disabled: submit.classList.contains(MODIFIER_DISABLED),
@@ -100,23 +102,22 @@ function makeDefinition({ addTodo, subscribeStatus }) {
 				onAvailable(binder, status)
 			);
 
-			this.binder = binder;
-		}
+			instances.set(root, binder);
+		},
 
-		disconnectedCallback() {
-			if (!this.binder) return;
+		disconnectedCallback(root) {
+			const binder = instances.get(root);
+			if (!binder) return;
 
-			const binder = this.binder;
-			this.binder = undefined;
+			instances.delete(binder.root);
 			binder.submit.removeEventListener('click', binder);
 			binder.unsubscribeStatus?.();
 		}
 	}
 
 	return {
-		name: NAME,
-		constructor: TodoNew,
-		options: { extends: 'form' },
+		selector: SELECTOR_ROOT,
+		spec,
 	};
 }
 

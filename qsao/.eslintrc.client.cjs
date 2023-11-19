@@ -9,14 +9,12 @@ module.exports = {
 		'fetch': 'readonly',
 		'FormData': 'readonly',
 		'HTMLButtonElement': 'readonly',
-		'HTMLDivElement': 'readonly',
 		'HTMLElement': 'readonly',
 		'HTMLInputElement': 'readonly',
 		'HTMLLabelElement': 'readonly',
 		'HTMLLIElement': 'readonly',
 		'HTMLTemplateElement': 'readonly',
 		'HTMLUListElement': 'readonly',
-		'self': 'readonly',
 		'Text': 'readonly',
 	}
 };

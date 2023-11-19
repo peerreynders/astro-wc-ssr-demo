@@ -8,11 +8,11 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
-		"lint:es": "eslint -c .eslintrc.server.cjs ./src",
-		"lint:types": "astro check",
+    "lint:es": "eslint -c .eslintrc.server.cjs ./src",
+    "lint:types": "astro check",
     "client:build": "./node_modules/.bin/rollup -c src/client/rollup.config.mjs",
     "client:types": "./node_modules/.bin/tsc --noEmit -p src/client/tsconfig.json",
-		"client:es": "eslint -c .eslintrc.client.cjs ./src/client",
+    "client:es": "eslint -c .eslintrc.client.cjs ./src/client",
     "format": "prettier --write ./src --plugin prettier-plugin-astro"
   },
   "repository": {
@@ -29,7 +29,7 @@
   "dependencies": {
     "@astrojs/check": "^0.3.0",
     "@astrojs/node": "^6.0.3",
-    "astro": "^3.4.1",
+    "astro": "^3.5.5",
     "nanoid": "^5.0.3",
     "typescript": "^5.2.2",
     "uncrypto": "^0.1.3",

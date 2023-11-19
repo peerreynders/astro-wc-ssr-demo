@@ -8,7 +8,12 @@ interface Props {
 
 const todo = Astro.props.todo;
 const [todoId, index, checked, disabled] = todo
-	? [todo.id, String(todo.index), todo.completed ? 'checked' : undefined, 'disabled']
+	? [
+			todo.id,
+			String(todo.index),
+			todo.completed ? 'checked' : undefined,
+			'disabled',
+	  ]
 	: ['', '', undefined, undefined];
 ---
 

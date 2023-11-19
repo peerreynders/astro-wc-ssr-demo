@@ -1,9 +1,11 @@
 // @ts-check
 // file: src/client/entry.js
-import { define } from './components/registry';
 import { makeTodoActions } from './app/browser';
 import { makeApp } from './app/index';
-import * as todosView from './components/todos-view';
+import { define } from './components/registry';
+import * as todoNew from './components/todo-new';
+import * as todoContent from './components/todo-content';
+import * as todoList from './components/todo-list';
 
 function assembleApp() {
 	const actions = makeTodoActions('/api/todos');
@@ -14,19 +16,31 @@ function assembleApp() {
 	});
 }
 
-/** @param { ReturnType<typeof makeApp> } app
- * @returns { void }
+/**	@param { ReturnType<typeof makeApp> } app
+ *	@returns { void }
  */
 function hookupUI(app) {
-	define(
-		todosView.NAME,
-		todosView.makeSpec({
-			addTodo: app.addTodo,
-			removeTodo: app.removeTodo,
-			toggleTodo: app.toggleTodo,
-			subscribeTodoEvent: app.subscribeTodoEvent,
-		})
-	);
+	const itemContent = todoContent.makeSupport();
+
+	define(todoNew.makeDefinition({
+		addTodo: app.addTodo,
+		subscribeStatus: app.subscribeStatus,
+	}));
+
+	define(todoList.makeDefinition({
+		content: {
+			render: itemContent.render,
+			from: itemContent.fromContent,
+			selector: itemContent.selectorRoot,
+		},
+		removeTodo: app.removeTodo,
+		toggleTodo: app.toggleTodo,
+		subscribeStatus: app.subscribeStatus,
+		subscribeTodoEvent: app.subscribeTodoEvent,
+	}));
 }
 
-hookupUI(assembleApp());
+const app = assembleApp();
+hookupUI(app);
+
+app.start();

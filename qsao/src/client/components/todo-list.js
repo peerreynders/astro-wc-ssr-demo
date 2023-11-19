@@ -1,22 +1,24 @@
 // @ts-check
-// file: src/components/todos-view.js
+// file: src/client/components/todo-list.js
+import { availableStatus } from '../app/available-status';
+
 /** @typedef { import('../types').QsaoSpec } Spec */
 
 /** @typedef {import('../index').Todo} Todo */
+/** @typedef {import('../app').AvailableStatus} AvailableStatus */
 /** @typedef {import('../app').AddTodo} AddTodo */
 /** @typedef {import('../app').RemoveTodo} RemoveTodo */
 /** @typedef {import('../app').ToggleTodo} ToggleTodo */
 /** @typedef {import('../app').TodoEvent} TodoEvent */
+/** @typedef {import('../app').SubscribeStatus} SubscribeStatus */
 /** @typedef {import('../app').SubscribeTodoEvent} SubscribeTodoEvent */
+/** @typedef {import('../types').FromTodoContent} FromTodoContent */
 
-const NAME = 'js\\:c-todos-view';
+const SELECTOR_ROOT = '.js\\:c-todo-list';
 const TEMPLATE_ITEM_ID = 'template-todo-item';
-const SELECTOR_TITLE = '.js\\:c-todos-view__title';
-const SELECTOR_NEW = '.js\\:c-todos-view__new';
-const SELECTOR_LIST = '.js\\:c-todos-view__list';
-const SELECTOR_LABEL = 'label';
 const SELECTOR_CHECKBOX = 'input[type=checkbox]';
 const SELECTOR_REMOVE = 'button';
+const MODIFIER_DISABLED = 'js:c-todo-list--disabled';
 
 /** @returns {() => HTMLLIElement} */
 function makeCloneBlankItem() {
@@ -28,27 +30,31 @@ function makeCloneBlankItem() {
 	if (!(root instanceof HTMLLIElement))
 		throw new Error(`Unexpected ${TEMPLATE_ITEM_ID} template root`);
 
+	// Turn off aria-disabled
+	const element = root.querySelector('[aria-disabled="true"]');
+	if (element) element.setAttribute('aria-disabled', 'false');
+
 	return function cloneBlankItem() {
 		return /** @type {HTMLLIElement} */ (root.cloneNode(true));
 	};
 }
 
-/** @typedef {object} ItemBinder
- * @property {HTMLLIElement} root
- * @property {HTMLInputElement} completed
- * @property {HTMLButtonElement} remove
- * @property {string} id
- * @property {number} index
+/**	@typedef {object} ItemBinder
+ *	@property {HTMLLIElement} root
+ *	@property {HTMLInputElement} completed
+ *	@property {HTMLButtonElement} remove
+ *	@property {string} id
+ *	@property {number} index
  */
 
 /** @typedef {ItemBinder[]} ItemCollection */
 /* Note keep sorted by ascending index property */
 
-/** @param {ItemBinder['root']} root
- * @param {ItemBinder['completed']} completed
- * @param {ItemBinder['remove']} remove
- * @param {ItemBinder['id']} id
- * @param {ItemBinder['index']} index
+/**	@param {ItemBinder['root']} root
+ *	@param {ItemBinder['completed']} completed
+ *	@param {ItemBinder['remove']} remove
+ *	@param {ItemBinder['id']} id
+ *	@param {ItemBinder['index']} index
  */
 const makeItemBinder = (root, completed, remove, id, index) => ({
 	root,
@@ -58,28 +64,29 @@ const makeItemBinder = (root, completed, remove, id, index) => ({
 	index,
 });
 
-/** @param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
- * @param {Todo} todo
- * @returns {[root: HTMLLIElement, binder: ItemBinder]}
+/**	@param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
+ *	@param {TodoRender} contentRender
+ *	@param {Todo} todo
+ *	@returns {[root: HTMLLIElement, binder: ItemBinder]}
  */
-function fillItem(cloneBlankItem, todo) {
+function fillItem(cloneBlankItem, contentRender, todo) {
 	const root = cloneBlankItem();
-	const label = root.querySelector(SELECTOR_LABEL);
 	const checkbox = root.querySelector(SELECTOR_CHECKBOX);
 	const remove = root.querySelector(SELECTOR_REMOVE);
 	if (
 		!(
-			label instanceof HTMLLabelElement &&
 			checkbox instanceof HTMLInputElement &&
 			remove instanceof HTMLButtonElement
 		)
 	)
 		throw new Error('Unexpected <li> shape for todo');
 
+	const content = contentRender(todo);
+
 	root.dataset['index'] = String(todo.index);
 	checkbox.checked = todo.completed;
-	label.dataset['id'] = todo.id;
-	if (todo.title) label.appendChild(new Text(todo.title));
+	checkbox.id = todo.id;
+	remove.before(content);
 
 	const binder = makeItemBinder(root, checkbox, remove, todo.id, todo.index);
 
@@ -87,14 +94,18 @@ function fillItem(cloneBlankItem, todo) {
 }
 
 /**	@param {ItemBinder} itemA
- * @param {ItemBinder} itemB
+ *	@param {ItemBinder} itemB
  */
 const byIndexAsc = ({ index: a }, { index: b }) => a - b;
 
-/** @param {HTMLUListElement} list
- * @returns {ItemCollection}
+/**	@typedef {(todo: Todo) => HTMLElement} TodoRender */
+
+/**	@param {FromTodoContent} fromContent
+ *	@param {string} contentSelector
+ *	@param {HTMLUListElement} list
+ *	@returns {ItemCollection}
  */
-function fromUL(list) {
+function fromUL(fromContent, contentSelector, list) {
 	const items = list.children;
 
 	/** @type {ItemCollection} */
@@ -103,15 +114,15 @@ function fromUL(list) {
 		const root = items.item(i);
 		if (!(root instanceof HTMLLIElement)) continue;
 
+		const content = root.querySelector(contentSelector);
+		if (!(content instanceof HTMLElement)) continue;
+
+		const [id] = fromContent(content);
+		if (id === undefined) continue;
+
 		const value = root.dataset['index'];
 		const index = value ? parseInt(value, 10) : NaN;
 		if (Number.isNaN(index)) continue;
-
-		const label = root.querySelector(SELECTOR_LABEL);
-		if (!(label instanceof HTMLLabelElement)) continue;
-
-		const id = label.dataset['id'] ?? '';
-		if (id.length < 1) continue;
 
 		const completed = root.querySelector(SELECTOR_CHECKBOX);
 		if (!(completed instanceof HTMLInputElement)) continue;
@@ -125,9 +136,9 @@ function fromUL(list) {
 	return binders.sort(byIndexAsc);
 }
 
-/** @param {ItemCollection} binders
- * @param {ItemBinder} newBinder
- * @returns { HTMLLIElement | undefined }
+/**	@param {ItemCollection} binders
+ *	@param {ItemBinder} newBinder
+ *	@returns { HTMLLIElement | undefined }
  */
 function spliceItemBinder(binders, newBinder) {
 	const last = binders.length - 1;
@@ -153,20 +164,20 @@ function spliceItemBinder(binders, newBinder) {
 	return before;
 }
 
-/** @param {ToggleTodo} toggleTodo
- * @param {RemoveTodo} removeTodo
+/**	@param {ToggleTodo} toggleTodo
+ *	@param {RemoveTodo} removeTodo
  *	@param {ItemCollection} binders
- * @param {EventTarget | undefined | null} target
- * @returns { boolean } actionRequested
+ *	@param {EventTarget | undefined | null} target
+ *	@returns { boolean } actionRequested
  */
 function dispatchIntent(toggleTodo, removeTodo, binders, target) {
 	// checkbox clicked →  toggle todo
 	// button clicked → remove todo
-	/** @type {[
-	 *		predicate: ((binder: ItemBinder) => boolean) | undefined,
+	/**	@type {[
+	 *	predicate: ((binder: ItemBinder) => boolean) | undefined,
 	 *		remove: boolean,
 	 *		completed: boolean,
-	 * ]}
+	 *	]}
 	 */
 	const [predicate, remove, completed] =
 		target instanceof HTMLInputElement
@@ -188,22 +199,22 @@ function dispatchIntent(toggleTodo, removeTodo, binders, target) {
 }
 
 /** @typedef {object} Binder
- * @property {HTMLElement} root
- * @property {HTMLInputElement} title
- * @property {HTMLButtonElement} newTitle
- * @property {HTMLUListElement} list
- * @property {ItemCollection} items
- * @property {(this: Binder, event: Event) => void} handleEvent
- * @property {(() => void) | undefined} unsubscribeTodoEvent
+ *	@property {HTMLUListElement} root
+ *	@property {boolean} disabled
+ *	@property {ItemCollection} items
+ *	@property {(this: Binder, event: Event) => void} handleEvent
+ *	@property {(() => void) | undefined} unsubscribeStatus
+ *	@property {(() => void) | undefined} unsubscribeTodoEvent
  */
 
 /** @param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
- * @param {HTMLUListElement} list
- * @param {ItemCollection} binders
- * @param {Readonly<Todo>} todo
+ *	@param {TodoRender} contentRender
+ *	@param {HTMLUListElement} list
+ *	@param {ItemCollection} binders
+ *	@param {Readonly<Todo>} todo
  */
-function addItem(cloneBlankItem, list, binders, todo) {
-	const [item, binder] = fillItem(cloneBlankItem, todo);
+function addItem(cloneBlankItem, contentRender, list, binders, todo) {
+	const [item, binder] = fillItem(cloneBlankItem, contentRender, todo);
 	const before = spliceItemBinder(binders, binder);
 	if (before) {
 		before.after(item);
@@ -212,8 +223,8 @@ function addItem(cloneBlankItem, list, binders, todo) {
 	}
 }
 
-/** @param {ItemCollection} binders
- * @param {string} id
+/**	@param {ItemCollection} binders
+ *	@param {string} id
  */
 function removeItem(binders, id) {
 	const i = binders.findIndex((binder) => binder.id === id);
@@ -224,9 +235,9 @@ function removeItem(binders, id) {
 	binder.root.remove();
 }
 
-/** @param {ItemCollection} binders
- * @param {string} id
- * @param {boolean} completed
+/**	@param {ItemCollection} binders
+ *	@param {string} id
+ *	@param {boolean} completed
  */
 function toggleItem(binders, id, completed) {
 	const binder = binders.find((binder) => binder.id === id);
@@ -236,15 +247,22 @@ function toggleItem(binders, id, completed) {
 	if (completed !== checkbox.checked) checkbox.checked = completed;
 }
 
-/** @param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
- * @param {Binder} binder
- * @returns {(event: TodoEvent) => void}
+/**	@param {ReturnType<typeof makeCloneBlankItem>} cloneBlankItem
+ *	@param {TodoRender} contentRender
+ *	@param {Binder} binder
+ *	@returns {(event: TodoEvent) => void}
  */
-function makeTodoNotify(cloneBlankItem, binder) {
+function makeTodoNotify(cloneBlankItem, contentRender, binder) {
 	return function todoNotify(event) {
 		switch (event.kind) {
 			case 'todo-new':
-				return addItem(cloneBlankItem, binder.list, binder.items, event.todo);
+				return addItem(
+					cloneBlankItem,
+					contentRender,
+					binder.root,
+					binder.items,
+					event.todo
+				);
 
 			case 'todo-remove':
 				return removeItem(binder.items, event.id);
@@ -255,37 +273,51 @@ function makeTodoNotify(cloneBlankItem, binder) {
 	};
 }
 
-/** @param {{
- * 	addTodo: AddTodo;
- * 	removeTodo: RemoveTodo;
- * 	toggleTodo: ToggleTodo;
- * 	subscribeTodoEvent: SubscribeTodoEvent;
- * }} depend
+/** @param {Binder} binder
+ * @param {AvailableStatus} status
  */
-function makeSpec({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
+function onAvailable(binder, status) {
+	const disabled = status !== availableStatus.READY;
+	const value = disabled ? 'true' : 'false';
+	binder.disabled = disabled;
+	binder.root.classList.toggle(MODIFIER_DISABLED, disabled);
+	binder.root.setAttribute('aria-disabled', value);
+
+	for (let i = 0; i < binder.items.length; i += 1) {
+		const item = binder.items[i];
+		item.completed.disabled = disabled;
+		item.remove.setAttribute('aria-disabled', value);
+	}
+}
+
+/**	@param {{
+ *		content: {
+ *			render: TodoRender;
+ *			from: FromTodoContent;
+ *			selector: string;
+ *		};
+ *		removeTodo: RemoveTodo;
+ *		toggleTodo: ToggleTodo;
+ * 		subscribeStatus: SubscribeStatus;
+ *		subscribeTodoEvent: SubscribeTodoEvent;
+ *	}} dependencies
+ */
+function makeDefinition({
+	content,
+	removeTodo,
+	toggleTodo,
+	subscribeStatus,
+	subscribeTodoEvent,
+}) {
 	const cloneBlankItem = makeCloneBlankItem();
 
-	/** @param {HTMLInputElement} title
-	 */
-	async function dispatchAddTodo(title) {
-		await addTodo(title.value);
-		title.value = '';
-	}
-
 	/** @this Binder
-	 * @param {Event} event
+	 *	@param {Event} event
 	 */
 	function handleEvent(event) {
+		if (this.disabled) return;
+
 		if (event.type === 'click') {
-			if (event.target === this.newTitle) {
-				// Add new todo
-				event.preventDefault();
-				if (this.title.value.length < 1) return;
-
-				dispatchAddTodo(this.title);
-				return;
-			}
-
 			// Toggle/Remove Todo
 			dispatchIntent(toggleTodo, removeTodo, this.items, event.target);
 			return;
@@ -296,54 +328,47 @@ function makeSpec({ addTodo, removeTodo, toggleTodo, subscribeTodoEvent }) {
 	const instances = new Map();
 
 	/** @type {Spec} */
-	const spec = {
-		connectedCallback(element) {
-			if (!(element instanceof HTMLDivElement))
+	const spec = {	
+		connectedCallback(root) {
+			if (!(root instanceof HTMLUListElement))
 				throw new Error('Unexpected root element type');
-
-			const root = element;
-			const title = root.querySelector(SELECTOR_TITLE);
-			if (!(title instanceof HTMLInputElement))
-				throw new Error('Unable to bind to todo "title" input');
-
-			const newTitle = root.querySelector(SELECTOR_NEW);
-			if (!(newTitle instanceof HTMLButtonElement))
-				throw new Error('Unable to bind to "new" todo button');
-
-			const list = root.querySelector(SELECTOR_LIST);
-			if (!(list instanceof HTMLUListElement))
-				throw new Error('Unable to bind to todo list');
 
 			/** @type {Binder} */
 			const binder = {
 				root,
-				title,
-				newTitle,
-				list,
-				items: fromUL(list),
+				disabled: root.classList.contains(MODIFIER_DISABLED),
+				items: fromUL(content.from, content.selector, root),
 				handleEvent,
+				unsubscribeStatus: undefined,
 				unsubscribeTodoEvent: undefined,
 			};
 
-			binder.unsubscribeTodoEvent = subscribeTodoEvent(
-				makeTodoNotify(cloneBlankItem, binder)
+			binder.unsubscribeStatus = subscribeStatus((status) =>
+				onAvailable(binder, status)
 			);
-			binder.newTitle.addEventListener('click', binder);
-			binder.list.addEventListener('click', binder);
+			binder.unsubscribeTodoEvent = subscribeTodoEvent(
+				makeTodoNotify(cloneBlankItem, content.render, binder)
+			);
+			root.addEventListener('click', binder);
 
 			instances.set(root, binder);
 		},
-		disconnectedCallback(element) {
-			const binder = instances.get(element);
+
+		disconnectedCallback(root) {
+			const binder = instances.get(root);
 			if (!binder) return;
 
 			instances.delete(binder.root);
-			binder.list.removeEventListener('click', binder);
-			binder.newTitle.removeEventListener('click', binder);
+			binder.root.removeEventListener('click', binder);
+			binder.unsubscribeStatus?.();
 			binder.unsubscribeTodoEvent?.();
-		},
+		}
+	}
+
+	return {
+		selector: SELECTOR_ROOT,
+		spec,
 	};
-	return spec;
 }
 
-export { NAME, makeSpec };
+export { makeDefinition };

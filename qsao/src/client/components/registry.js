@@ -21,12 +21,12 @@ const qsao = Qsao({
 	},
 });
 
-/** @param { string} name
- * @param { Spec } spec
- * @return { void }
+/**	@param {{
+ * 	  selector: string;
+ *    spec: Spec;
+ * }} component
  */
-const define = (name, spec) => {
-	const selector = '.' + name;
+const define = ({selector, spec}) => {
 	if (query.includes(selector)) return;
 
 	query.push(selector);

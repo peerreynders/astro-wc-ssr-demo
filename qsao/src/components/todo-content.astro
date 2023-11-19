@@ -1,0 +1,13 @@
+---
+// file: src/components/todo-content.astro
+import type { Todo } from '../types';
+
+interface Props {
+	todo?: Todo;
+}
+
+const todo = Astro.props.todo;
+const [todoId, title] = todo ? [todo.id, todo.title] : ['', ''];
+---
+
+<label class="js:c-todo-content" for={todoId}>{title}</label>

@@ -1,5 +1,5 @@
 // @ts-check
-// file: src/client/components/todos-view.js
+// file: src/client/components/todo-list.js
 import { availableStatus } from '../app/available-status';
 
 /** @typedef {import('../index').Todo} Todo */
@@ -29,7 +29,7 @@ function makeCloneBlankItem() {
 		throw new Error(`Unexpected ${TEMPLATE_ITEM_ID} template root`);
 
 	// Turn off aria-disabled
-	const element = root.querySelector('[aria-disabled=true]');
+	const element = root.querySelector('[aria-disabled="true"]');
 	if (element) element.setAttribute('aria-disabled', 'false');
 
 	return function cloneBlankItem() {

@@ -8,7 +8,7 @@ Lack of standardized SSR support is one of the greatest drawbacks of Web Compone
 Granted some frameworks aim to support SSR ([Lit](https://lit.dev/docs/ssr/overview/) in particular but it still requires JS on the server) but at that point *one has already adopted a framework* which is acceptable if that is the shop framework.
 Even when it comes to μ-frontends, the going recommendation is to stick to one, [single framework (and version)](https://youtu.be/A3n1n5QRmF0?t=1657).
 
-The argument that any Web Component based framework will be comparatively [longer-lived](https://jakelazaroff.com/words/web-components-will-outlive-your-javascript-framework/) because "it's based on a platform standard" is also more than a little bit disingenuous ([AppCache](https://web.archive.org/web/20210603132501/https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache) ([2018](https://groups.google.com/a/chromium.org/g/blink-dev/c/FvM-qo7BfkI/m/0daqyD8kCQAJ)) would like a word); Polymer in particular went through a number of major revisions over the years (1.0 (2015), 2.0 (2017), 3.0 (2018), lit-html (2017), Lit 1.0 (2019), Lit 2.0 (2021), Lit 3.0 (2023)).
+The argument that any Web Component based framework will be comparatively [longer-lived](https://jakelazaroff.com/words/web-components-will-outlive-your-javascript-framework/) because "it's based on a platform standard" is also more than a little bit disingenuous ([AppCache](https://web.archive.org/web/20210603132501/https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache) ([2018](https://groups.google.com/a/chromium.org/g/blink-dev/c/FvM-qo7BfkI/m/0daqyD8kCQAJ)) would like [a word](https://youtu.be/zCXMh5K5hKQ)); Polymer in particular went through a number of major revisions over the years (1.0 (2015), 2.0 (2017), 3.0 (2018), lit-html (2017), Lit 1.0 (2019), Lit 2.0 (2021), Lit 3.0 (2023)).
 
 This particular example is based on a reworked version of the [Web Components: From zero to hero](https://thepassle.github.io/webcomponents-from-zero-to-hero/) tutorial. Like most tutorials of this kind, it's shamelessly component-oriented ([centric](https://twitter.com/acemarke/status/1056669495354421249)) and by extension [client-side rendered (CSR)](https://www.patterns.dev/react/client-side-rendering) focused (very [pre-2016](https://github.com/vercel/next.js/releases/tag/1.0.0) and firmly rooted in the traditions of the [desktop web](https://youtu.be/wsdPeC86OH0?t=472)). *Continued in [More Thoughts on Web Components](#more-thoughts-on-web-components).*
 
@@ -991,7 +991,593 @@ hookupUI(assembleApp());
 
 Now `addTodo` is injected into `TodoNew`. Note how `TodosView` and `TodoNew` are not coupled to one another but rather to the API contract of the app.
 
-- To be continued
+As at this point `TodosView` no longer manages new todos; it's responsibility (and scope of control) are better described by `TodoList`. Going forward these are the objectives:
+
+- turn `todos-view` into `todo-list`
+- add the responsibility of the wait/busy indicator to `todo-new`
+- render both the `TodoList` and `TodoNew` Astro components in `disabled` mode (to only be activated client side)
+- add an `AvailableStatus` to the client side app that client components can subscribe to
+- modify `TodoNew` and `TodoList` to subscribe to the `AvailableStatus`
+
+Starting on the server side:
+
+```Astro
+---
+// file: src/components/todo-new.astro
+---
+
+<form is="todo-new">
+  <input
+    name="todo-title"
+    type="text"
+    placeholder="Add a new to do"
+    class="js:c-todo-new__title js:c-todo-new--disabled"
+  />
+  <button
+    class="c-todo-new__submit js:c-todo-new__submit js:c-todo-new--disabled"
+    aria-disabled="true">✅</button
+  >
+</form>
+```
+
+`TodoNew` has all the modifications for the component to start up in *disabled* mode until the client side app signals a `ready` `AvailableStatus`.
+
+```Astro
+---
+// file: src/components/todo-item.astro
+import type { Todo } from '../types';
+
+interface Props {
+  todo?: Todo;
+}
+
+const todo = Astro.props.todo;
+const [todoId, index, checked, disabled] = todo
+  ? [
+      todo.id,
+      String(todo.index),
+      todo.completed ? 'checked' : undefined,
+      'disabled',
+    ]
+  : ['', '', undefined, undefined];
+---
+
+<li class="c-todo-list__item" data-index={index}>
+  <input type="checkbox" {checked} id={todoId} {disabled} />
+  <slot />
+  <button aria-disabled="true"}>❌</button>
+</li>
+```
+
+`TodoItem` renders `disabled` for server side rendering and enabled for the inclusion as a template.
+
+Note: Using a dynamic `aria-disabled` attribute on the `<button>` results in a `'{ "aria-disabled": string; }' is not assignable to type 'ButtonHTMLAttributes'.` TypeScript error, likely because the [`disabled`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLButtonElement/disabled) property is directly supported. There are however [reasons](https://css-tricks.com/making-disabled-buttons-more-inclusive/) to favour `aria-disabled` over `disabled` on buttons. As a workaround a static `aria-disabled="true"` (appropriate for server side rendering) is used which is later corrected in the template client side. 
+
+```Astro
+---
+// file: src/components/todo-list.astro
+import type { Todo } from '../types';
+import TodoContent from './todo-content.astro';
+import TodoItem from './todo-item.astro';
+
+interface Props {
+  todos: Todo[];
+}
+
+const { todos } = Astro.props;
+---
+
+<ul
+  is="todo-list"
+  class="js:c-todo-list--disabled"
+  aria-disabled="true"
+>
+  {
+    todos.map((todo) => (
+      <TodoItem {todo}>
+        <TodoContent {todo} />
+      </TodoItem>
+    ))
+  }
+</ul>
+```
+
+Again a *built-in custom component* is used just to dispense with the wrapping `<todo-list>` tag and it is rendered as its `disabled` variant.
+
+```Astro
+---
+// file: src/pages/index.astro
+import Base from '../layouts/base.astro';
+import MainTemplates from '../templates/main-templates.astro';
+import TodoNew from '../components/todo-new.astro';
+import TodoList from '../components/todo-list.astro';
+import { selectTodos } from './todos-store';
+
+const todos = await selectTodos(Astro.locals.sessionId);
+const title = `Astro "WC: zero to hero" Todos`;
+---
+
+<Base {title}>
+  <main>
+    <h3>{title}</h3>
+    <br />
+    <h1>To do</h1>
+    <TodoNew />
+    <TodoList {todos} />
+  </main>
+  <MainTemplates />
+  {
+    /* <script is:inline id="resume-data" type="application/json" set:html={JSON.stringify(todos)} /> */
+  }
+</Base>
+```
+
+The headings are now just static parts of the page while the `TodoNew` and `TodoList` Astro components are responsible for rendering the component content that will allow them to correctly mount.
+
+Currently todo `new`, `toggle`, and `update` happen too quickly on `localhost`:
+
+```TypeScript
+// file: src/lib/delay.ts
+
+function makeDelay<T>(ms = 300) {
+  return function delay(value: T) {
+    return ms < 1
+      ? value
+      : new Promise((resolve, _reject) => {
+          setTimeout(() => resolve(value), ms);
+        });
+  };
+}
+
+export { makeDelay };
+```
+
+This function creates an identity function that delays its input by the specified milliseconds.
+
+```TypeScript
+// file: src/pages/api/todos/index.ts
+import { makeDelay } from '../../../lib/delay';
+
+// … 
+  const todo = await appendTodo(context.locals.sessionId, title).then(
+    makeDelay()
+  );
+// … 
+```
+
+```TypeScript
+// file: src/pages/api/todos/[id].ts
+import { makeDelay } from '../../../lib/delay';
+
+// … 
+  if (intent === 'remove')
+    return remove(context.locals.sessionId, todoId).then(makeDelay());
+
+  // Optional `force` field
+  const force = data.get('force');
+  return toggle(
+    context.locals.sessionId,
+    todoId,
+    force === 'true' ? true : force === 'false' ? false : undefined
+  ).then(makeDelay());
+// … 
+```
+
+On the client side the app needs to publish `AvailableStatus`:
+
+```JavaScript
+// @ts-check
+
+const availableStatus = /** @type {const} */ ({
+  UNAVAILABLE: -1,
+  WAIT: 0,
+  READY: 1,
+});
+
+export { availableStatus };
+```
+
+```JavaScript
+// @ts-check
+// file: src/client/app/index.js
+import { availableStatus } from './available-status';
+import { Multicast } from '../lib/multicast.js';
+
+/** @typedef {import('../index').Todo} Todo */
+
+// Types implemented for UI
+/** @typedef {import('../app').AvailableStatus} AvailableStatus */
+/** @typedef {import('../app').SubscribeStatus} SubscribeStatus */
+/** @typedef {import('../app').AddTodo} AddTodo */
+/** @typedef {import('../app').RemoveTodo} RemoveTodo */
+/** @typedef {import('../app').ToggleTodo} ToggleTodo */
+
+/** @typedef {object} Platform
+ * @property {import('./types').AddTodo} addTodo
+ * @property {import('./types').RemoveTodo} removeTodo
+ * @property {import('./types').ToggleTodo} toggleTodo
+ */
+
+/** @param { Platform } platform
+ */
+function makeApp(platform) {
+  /** @type {AvailableStatus} */
+  let status = availableStatus.UNAVAILABLE;
+  /** @type {Multicast<import('../app').AvailableStatus>} */
+  const available = new Multicast();
+
+  /** @type {SubscribeStatus} */
+  const subscribeStatus = (sink) => {
+    const unsubscribe = available.add(sink);
+    sink(status);
+    return unsubscribe;
+  };
+
+  const readyStatus = () => {
+    status = availableStatus.READY;
+    available.send(status);
+  };
+  const waitStatus = () => {
+    status = availableStatus.WAIT;
+    available.send(status);
+  };
+
+  /** @type {Multicast<import('../app').TodoEvent>} */
+  const todoEvents = new Multicast();
+
+  /** @type { AddTodo } */
+  const addTodo = async (title) => {
+    waitStatus();
+    try {
+      const todo = await platform.addTodo(title);
+      todoEvents.send({ kind: 'todo-new', todo });
+    } finally {
+      readyStatus();
+    }
+  };
+
+  /** @type { RemoveTodo } */
+  const removeTodo = async (id) => {
+    waitStatus();
+    try {
+      const removed = await platform.removeTodo(id);
+      if (!removed) return;
+
+      todoEvents.send({ kind: 'todo-remove', id });
+    } finally {
+      readyStatus();
+    }
+  };
+
+  /** @type { ToggleTodo } */
+  const toggleTodo = async (id, force) => {
+    waitStatus();
+    try {
+      const todo = await platform.toggleTodo(id, force);
+      todoEvents.send({ kind: 'todo-toggle', id, completed: todo.completed });
+    } finally {
+      readyStatus();
+    }
+  };
+
+  const start = () => {
+    if (status !== availableStatus.UNAVAILABLE) return;
+    readyStatus();
+  };
+
+  return {
+    addTodo,
+    removeTodo,
+    toggleTodo,
+    start,
+    subscribeTodoEvent: todoEvents.add,
+    subscribeStatus,
+  };
+}
+
+export { makeApp };
+```
+
+The app's `AvailableStatus` is initialized to `UNAVAILABLE` and isn't advanced to `READY` until `start()` is run. This way none of the components will receive the `READY` status until all the necessary functionality has been wired up. `subscribeStatus` wraps `Multicast.add()` by immediately sending the current `status` to the newly registered `sink`. The convenience functions `readyStatus()` and `waitStatus()` set the `status` and broadcast the change to the listeners.
+
+`addTodo()`, `removeTodo()`, and `toggleTodo` now start by switching to `WAIT` and not going back the `READY` until the asynchronous operation completes. `readyStatus()` is invoked inside of a [`finally` block](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/try...catch#the_finally_block) in case the operation throws an exception (which may not be warranted in some cases).
+
+Both `start` and `subscribeStatus` are added to the returned API object.
+
+```JavaScript
+// @ts-check
+// file: src/client/entry.js
+import { makeTodoActions } from './app/browser';
+import { makeApp } from './app/index';
+import { define } from './components/registry';
+import * as todoNew from './components/todo-new';
+import * as todoContent from './components/todo-content';
+import * as todoList from './components/todo-list';
+
+function assembleApp() {
+  const actions = makeTodoActions('/api/todos');
+  return makeApp({
+    addTodo: actions.addTodo,
+    removeTodo: actions.removeTodo,
+    toggleTodo: actions.toggleTodo,
+  });
+}
+
+/**  @param { ReturnType<typeof makeApp> } app
+ *  @returns { void }
+ */
+function hookupUI(app) {
+  const itemContent = todoContent.makeSupport();
+
+  define(todoNew.makeDefinition({
+    addTodo: app.addTodo,
+    subscribeStatus: app.subscribeStatus,
+  }));
+
+  define(todoList.makeDefinition({
+    content: {
+      render: itemContent.render,
+      from: itemContent.fromContent,
+      selector: itemContent.selectorRoot,
+    },
+    removeTodo: app.removeTodo,
+    toggleTodo: app.toggleTodo,
+    subscribeStatus: app.subscribeStatus,
+    subscribeTodoEvent: app.subscribeTodoEvent,
+  }));
+}
+
+const app = assembleApp();
+hookupUI(app);
+
+app.start();
+```
+
+`hookupUI()` supplies both `TodoNew` and `TodoList` with the `subscribeStatus()` access and finally invokes `app.start()` when everything is wired up.
+
+```JavaScript
+// @ts-check
+// file: src/client/components/todo-new.js
+import { availableStatus } from '../app/available-status';
+
+/** @typedef {import('../app').AddTodo} AddTodo */
+/** @typedef {import('../app').AvailableStatus} AvailableStatus */
+/** @typedef {import('../app').SubscribeStatus} SubscribeStatus */
+
+const NAME = 'todo-new';
+const SELECTOR_TITLE = '.js\\:c-todo-new__title';
+const SELECTOR_NEW = '.js\\:c-todo-new__submit';
+const MODIFIER_DISABLED = 'js:c-todo-new--disabled';
+const MODIFIER_WAIT = 'js:c-todo-new--wait';
+
+/** @typedef {object} Binder
+ *  @property {HTMLFormElement} root
+ *  @property {HTMLInputElement} title
+ *  @property {HTMLButtonElement} submit
+ *  @property {boolean} disabled
+ *  @property {(this: Binder, event: Event) => void} handleEvent
+ *  @property {(() => void) | undefined} unsubscribeStatus
+ */
+
+/** @param {Binder} binder
+ * @param {AvailableStatus} status
+ */
+function onAvailable(binder, status) {
+  const [disabled, wait] =
+    status === availableStatus.READY
+      ? [false, false]
+      : status === availableStatus.WAIT
+      ? [true, true]
+      : [true, false];
+
+  binder.submit.classList.toggle(MODIFIER_WAIT, wait);
+
+  binder.disabled = disabled;
+  binder.submit.classList.toggle(MODIFIER_DISABLED, disabled);
+  binder.submit.setAttribute('aria-disabled', String(disabled));
+  binder.title.classList.toggle(MODIFIER_DISABLED, disabled);
+}
+
+/** @param {{
+ *   addTodo: AddTodo;
+ *   subscribeStatus: SubscribeStatus;
+ * }} dependencies
+ */
+function makeDefinition({ addTodo, subscribeStatus }) {
+  
+  // … 
+
+  class TodoNew extends HTMLFormElement {
+    /** @type {Binder | undefined} */
+    binder;
+
+    constructor() {
+      super();
+    }
+
+    connectedCallback() {
+      // … 
+
+      /** @type {Binder} */
+      const binder = {
+        root: this,
+        title,
+        submit,
+        disabled: submit.classList.contains(MODIFIER_DISABLED),
+        handleEvent,
+        unsubscribeStatus: undefined,
+      };
+      binder.submit.addEventListener('click', binder);
+      binder.unsubscribeStatus = subscribeStatus((status) =>
+        onAvailable(binder, status)
+      );
+
+      this.binder = binder;
+    }
+
+    disconnectedCallback() {
+      if (!this.binder) return;
+
+      const binder = this.binder;
+      this.binder = undefined;
+      binder.submit.removeEventListener('click', binder);
+      binder.unsubscribeStatus?.();
+    }
+  }
+
+  return {
+    name: NAME,
+    constructor: TodoNew,
+    options: { extends: 'form' },
+  };
+}
+
+export { makeDefinition };
+```
+
+In `onAvailable` both `UNAVAILABLE` and `WAIT` result in *disabled* but only `WAIT` results in *wait* (which activates the spinner). The presence of `MODIFIER_DISABLED` on the remove button's `classList` is used to initialize the new `disabled` property on `Binder`.  
+
+```JavaScript
+// @ts-check
+// file: src/client/components/todo-list.js
+import { availableStatus } from '../app/available-status';
+
+// … 
+
+/** @returns {() => HTMLLIElement} */
+function makeCloneBlankItem() {
+  const template = document.getElementById(TEMPLATE_ITEM_ID);
+  if (!(template instanceof HTMLTemplateElement))
+    throw Error(`${TEMPLATE_ITEM_ID} template not found`);
+
+  const root = template.content.firstElementChild;
+  if (!(root instanceof HTMLLIElement))
+    throw new Error(`Unexpected ${TEMPLATE_ITEM_ID} template root`);
+
+  // Turn off aria-disabled
+  const element = root.querySelector('[aria-disabled="true"]');
+  if (element) element.setAttribute('aria-disabled', 'false');
+
+  return function cloneBlankItem() {
+    return /** @type {HTMLLIElement} */ (root.cloneNode(true));
+  };
+}
+
+// … 
+
+/** @typedef {object} Binder
+ *  @property {HTMLUListElement} root
+ *  @property {boolean} disabled
+ *  @property {ItemCollection} items
+ *  @property {(this: Binder, event: Event) => void} handleEvent
+ *  @property {(() => void) | undefined} unsubscribeStatus
+ *  @property {(() => void) | undefined} unsubscribeTodoEvent
+ */
+
+// … 
+
+/** @param {Binder} binder
+ * @param {AvailableStatus} status
+ */
+function onAvailable(binder, status) {
+  const disabled = status !== availableStatus.READY;
+  const value = disabled ? 'true' : 'false';
+  binder.disabled = disabled;
+  binder.root.classList.toggle(MODIFIER_DISABLED, disabled);
+  binder.root.setAttribute('aria-disabled', value);
+
+  for (let i = 0; i < binder.items.length; i += 1) {
+    const item = binder.items[i];
+    item.completed.disabled = disabled;
+    item.remove.setAttribute('aria-disabled', value);
+  }
+}
+
+/**  @param {{
+ *    content: {
+ *      render: TodoRender;
+ *      from: FromTodoContent;
+ *      selector: string;
+ *    };
+ *    removeTodo: RemoveTodo;
+ *    toggleTodo: ToggleTodo;
+ *    subscribeStatus: SubscribeStatus;
+ *    subscribeTodoEvent: SubscribeTodoEvent;
+ *  }} dependencies
+ */
+function makeDefinition({
+  content,
+  removeTodo,
+  toggleTodo,
+  subscribeStatus,
+  subscribeTodoEvent,
+}) {
+  const cloneBlankItem = makeCloneBlankItem();
+
+  /** @this Binder
+   *  @param {Event} event
+   */
+  function handleEvent(event) {
+    if (this.disabled) return;
+
+    if (event.type === 'click') {
+      // Toggle/Remove Todo
+      dispatchIntent(toggleTodo, removeTodo, this.items, event.target);
+      return;
+    }
+  }
+
+  class TodoList extends HTMLUListElement {
+    /** @type {Binder | undefined} */
+    binder;
+
+    constructor() {
+      super();
+    }
+
+    connectedCallback() {
+      /** @type {Binder} */
+      const binder = {
+        root: this,
+        disabled: this.classList.contains(MODIFIER_DISABLED),
+        items: fromUL(content.from, content.selector, this),
+        handleEvent,
+        unsubscribeStatus: undefined,
+        unsubscribeTodoEvent: undefined,
+      };
+
+      binder.unsubscribeStatus = subscribeStatus((status) =>
+        onAvailable(binder, status)
+      );
+      binder.unsubscribeTodoEvent = subscribeTodoEvent(
+        makeTodoNotify(cloneBlankItem, content.render, binder)
+      );
+      this.addEventListener('click', binder);
+      this.binder = binder;
+    }
+
+    disconnectedCallback() {
+      if (!this.binder) return;
+
+      const binder = this.binder;
+      this.binder = undefined;
+      binder.root.removeEventListener('click', binder);
+      binder.unsubscribeStatus?.();
+      binder.unsubscribeTodoEvent?.();
+    }
+  }
+
+  return {
+    name: NAME,
+    constructor: TodoList,
+    options: { extends: 'ul' },
+  };
+}
+
+export { makeDefinition };
+``` 
+
+For `TodoList` note how `makeCloneBlankItem()` corrects the `aria-disabled` value for the remove button. The `disabled` property is stored on `TodoList`'s `Binder`. `onAvailable()` only concerns itself with *disabled* (not *wait*) and sets the list items functionality accordingly. `handleEvent()` now discards events that are received in the *disabled* state and the initial *disabled* state is derived from the presence of `MODIFIER_DISABLED` on the `<ul>` `classList`.  
 
 ## Some Thoughts on the Original Example
 
@@ -1001,7 +1587,7 @@ From a [recent article](https://adactio.com/journal/20618):
 
 This is about [progressive enhancement](https://alistapart.com/article/understandingprogressiveenhancement/), i.e. rendering HTML on the server, letting the browser build the DOM without JS and then handing the completed DOM over to JavaScript *to augment*. A more appropriate name for *progressively enhanced elements* would have been [Custom Elements](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements)—a term already reserved to distinguish between *customized built-in elements* and *autonomous custom elements*.
 
-Customized build-in elements are the closest to the notion of *progressively enhanced elements* but [WebKit has no intent on supporting them](https://github.com/WebKit/standards-positions/issues/97) (though this can be mitigated with [`builtin-elements`](https://github.com/WebReflection/builtin-elements).
+Customized build-in elements are the closest to the notion of *progressively enhanced elements* but [WebKit has no intent on supporting them](https://github.com/WebKit/standards-positions/issues/97) (though this can be mitigated with [`builtin-elements`](https://github.com/WebReflection/builtin-elements)).
 
 This is perhaps why Web Component tutorials primarily focus on *autonomous custom elements*. Consequently Web Component tutorials (and proponents) seem to focus on using *autonomous custom elements* for implementing fully client-side rendered UI components, serving as an alternative to [framework components](https://docs.astro.build/en/core-concepts/framework-components/).
 

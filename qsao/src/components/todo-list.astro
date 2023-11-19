@@ -11,7 +11,7 @@ interface Props {
 const { todos } = Astro.props;
 ---
 
-<ul is="todo-list" class="js:c-todo-list--disabled" aria-disabled="true">
+<ul class="js:c-todo-list js:c-todo-list--disabled" aria-disabled="true">
 	{
 		todos.map((todo) => (
 			<TodoItem {todo}>
