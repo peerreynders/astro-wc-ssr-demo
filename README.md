@@ -1,6 +1,9 @@
 # astro-wc-ssr-demo
 tl;dr—[`<template>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) and the `HTMLTemplateElement` [`content`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLTemplateElement/content) property in combination with the `Node` [`cloneNode()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/cloneNode) method are probably the best bits to come out of the [Web Component API](https://developer.mozilla.org/en-US/docs/Web/API/Web_components#html_templates).
 
+- [Web Component](wc/README.md) variant
+- [`qsa-observer`](qsao/README.md) variant
+
 The following will discuss a recipe for implementing server rendered Web Components with any server language of choice (while commenting on some the ongoing trends in the Web Component narrative); i.e. without being locked into running JS on the server.
 [Astro](https://astro.build/) is just used as a convenient server platform/templating engine but no "Web Component JS code" is run on the server (i.e. [isomorphic JS](https://en.wikipedia.org/wiki/Isomorphic_JavaScript) isn't a requirement).
 
@@ -390,7 +393,7 @@ function addItem(cloneBlankItem, list, binders, todo) {
 
 ### 6. Components don't communicate with each other but only with the client side app.
 
-While this example only has one single Web Component the guideline still applies. The component's responsibilities are limited to delegating UI interactions to the client side application and projecting some client side application events to the UI. Any behaviour is extremely shallow and strictly limited to manipulating the DOM in response to “UI bound events” and converting DOM events to “application bound events” ([Humble Dialog](https://github.com/peerreynders/solid-bookstore-a/blob/main/assets/TheHumbleDialogBox.pdf)).
+While this example only has one single Web Component the guideline still applies. The component's responsibilities are limited to delegating UI interactions to the client side application and projecting some client side application events to the UI. Any behaviour is extremely shallow and strictly limited to manipulating the DOM in response to “UI bound events” and converting DOM events to “application bound events” ([ Dialog](https://github.com/peerreynders/solid-bookstore-a/blob/main/assets/TheHumbleDialogBox.pdf); rather than [MVC: misunderstood for 37 years](https://paulhammant.com/2015/04/29/mvc-misunderstood-for-37-years/), [MVC past, present and future](https://givan.se/mvc-past-present-and-future/)).
 
 - To be continued
 
@@ -728,7 +731,7 @@ The first step is to extract `TodoNew` from `TodosView`. In this circumstance `T
 </form>
 ```
 
-While not strictly necessary we'll make this a [customized built-in component](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements#types_of_custom_element) so that we can just use the [`is` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/is) on the `<form>` tag. But this also implies that it won't work on Safari without basing the Web Component on a [ponyfill](https://ponyfoo.com/articles/polyfills-or-ponyfills) (like [`builtin-elements`](https://github.com/WebReflection/builtin-elements)). As we are not accessing anything specific to [`HTMLFormElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement) inside the Web Component, `TodoNew` can be just as easily implemented with an autonomous custom element by wrapping the markup in a `<todo-new>` tag.
+While not strictly necessary we'll make this a [customized built-in element](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements#types_of_custom_element) so that we can just use the [`is` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/is) on the `<form>` tag. But this also implies that it won't work on Safari without basing the Web Component on a [ponyfill](https://ponyfoo.com/articles/polyfills-or-ponyfills) (like [`builtin-elements`](https://github.com/WebReflection/builtin-elements)). As we are not accessing anything specific to [`HTMLFormElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement) inside the Web Component, `TodoNew` can be just as easily implemented with an autonomous custom element by wrapping the markup in a `<todo-new>` tag.
 
 The next step is to add the new responsibility to `TodoNew` which first requires a refinement of the app interface.
 
@@ -1082,7 +1085,7 @@ const { todos } = Astro.props;
 </ul>
 ```
 
-Again a *built-in custom component* is used just to dispense with the wrapping `<todo-list>` tag and it is rendered as its `disabled` variant.
+Again a *customized built-in element* is used just to dispense with the wrapping `<todo-list>` tag and it is rendered as its `disabled` variant.
 
 ```Astro
 ---
@@ -1624,10 +1627,53 @@ However the phrasing of the HTML spec strongly suggests that the `<li>` element 
 A component that could be factored out is a "new todo input" which could also double as a busy indicator (see: [Factoring Out TodoNew](#factoring-out-todonew)). This way `todo-view` could focus on removing unwanted items from the list, adding new items (arriving from the server) to the list and (un)completing existing items.
 
 ## More Thoughts on Web Components
-- [Eshewing Shadow DOM (2019)](https://every-layout.dev/blog/eschewing-shadow-dom/)
+
+So what are Web Components good for? When including [shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM) 
+and [declarative shadow DOM](https://developer.chrome.com/articles/declarative-shadow-dom/) it's suggestive of “[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe) Enterprise Edition”, i.e. a more refined means for deploying third party content (mostly ads) to be included in affilated content sites/applications.
+
+Built-in custom elements are extremely useful to augment existing HTML elements but [WebKit's position](https://github.com/WebKit/standards-positions/issues/97) makes it necessary to base those on a [ponyfill](https://github.com/WebReflection/builtin-elements).
+
+I really, really wanted to like Web Components, being *part of the platform* and all. Started with [HowTo Components](https://web.dev/articles/components-examples-overview) (2017, [repo](https://github.com/GoogleChromeLabs/howto-components), [some explainers](https://github.com/google/WebFundamentals/tree/1c1d9a95c835c78b6a7497cfce0ce92e77aa8ac8/src/content/en/fundamentals/web-components/examples)) and continued with the [Web Components in Action](https://www.manning.com/books/web-components-in-action) MEAP (2019, gists: [1](https://gist.github.com/peerreynders/937193d5d043ca63289ff93d52842571), [2](https://gist.github.com/peerreynders/c44d3bd373340d0f21fbe50435e41108), [3](https://gist.github.com/peerreynders/084079c213e9da2abfcbd613fdeb6abc), [4](https://gist.github.com/peerreynders/1d4396fa6eb67daac706969a6389a9ca), [5](https://gist.github.com/peerreynders/33c98ffb7b35bd9aeaed524332bf640a), [6](https://gist.github.com/peerreynders/f7253c42332a048539f892be747bc767)). At least by the end of WCA there was a suggestion of using an [`eventbus`](https://github.com/bengfarrell/webcomponentsinaction/blob/0f165a068b4ebbd37d2756920d0228aecb77f1bf/chapter14/workoutcreator/data/eventbus.js) to enable communication patterns among a page's Web Components that weren't coupled to their position in the DOM tree or whatever other Web Component happend to create its instance (and by extension its attributes). However it was still fully immersed in the SPA mindset of [full on client-side rendering](https://github.com/bengfarrell/webcomponentsinaction/blob/0f165a068b4ebbd37d2756920d0228aecb77f1bf/chapter14/workoutcreator/index.html).
+
+It was during this time that [Andy Bell](https://andy-bell.co.uk/links/) suggested in [*A progressive disclosure component*](https://piccalil.li/tutorial/a-progressive-disclosure-component/#heading-going-one-step-further:-a-web-component) that a Web Component could simply take responsibility of the existing *light DOM* tree under it. [Heydon Pickering](https://heydonworks.com/) expanded on it later in [Eschewing Shadow DOM](https://every-layout.dev/blog/eschewing-shadow-dom/).
+
+The history of Web Components goes back to [2011](https://fronteers.nl/congres/2011/sessions/web-components-and-model-driven-views-alex-russell) and then the CSR focus was understandable given that web servers were often slow to render and web content was largely consumed on fat-core desktop computers. And while WC's purview was restricted to the browser it should have been feasible to develop a cross-platform templating language to support the specification. That templating language could have been natively supported by browsers while being constrained to be easily implementable in *any server side language* with string concatenation and without requiring any form of DOM emulation.  
+
+With the first release of Next.js in ([2016](https://github.com/vercel/next.js/releases/tag/1.0.0)) the writing was on the wall that CSR wasn't enough even for component-oriented architectures. In 2018 [@popeindustries/lit-html-server](https://github.com/popeindustries/lit-html-server) appeared on [npm](https://www.npmjs.com/package/@popeindustries/lit-html-server) for WC SSR ([later](https://www.npmjs.com/package/@popeindustries/lit-html-server) to be included in the [Stack Overflow PWA Demo](https://so-pwa.firebaseapp.com/)), so the shortfall was becoming extremely apparent.
+
+However one idea that didn't seem to catch on was settling on using [`<template>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) elements on the server rendered page to eliminate server and client template duplication, instead forcing the use of JS on the server to run JS Web Components for rendering as the preferred solution. This is likely due to the fact that delegating rendering markup to the server entirely removes the *convenient* “everything **and** the kitchen sink” [collocation](https://tidyfirst.substack.com/p/lumpers-and-splitters) of component-orientation. Framework components have created expections that vanilla Web Components simply cannot meet, while [not all "components" need to be DOM elements](https://youtu.be/BEWkLXU1Wlc?t=6359). 
+
+There are plenty of competent Web Component analyses around, some of which are:
 - [Why I don't use Web Components (2019)](https://dev.to/richharris/why-i-don-t-use-web-components-2cia)
 - [Maybe Web Components are not the future? (2020)](https://dev.to/ryansolid/maybe-web-components-are-not-the-future-hfh)
 - [The failed promise of Web Components (2020)](https://lea.verou.me/blog/2020/09/the-failed-promise-of-web-components/)
 - [About Web Components (2021)](https://webreflection.medium.com/about-web-components-cc3e8b4035b0)
-- Even back in 2003 it was clear that [getters and setters are evil](https://www.infoworld.com/article/2073723/why-getter-and-setter-methods-are-evil.html).
-- To be continued
+
+Aside from the lack of accomodation of WC SSR in the official spec, my other pet peeve is the way (Web) Component properties are often used (which was popularized by React).
+
+[Attributes](https://developer.mozilla.org/en-US/docs/Glossary/Attribute) in *static* markup make sense. They express which specific *variation* of a *generic* element should be instantiated *during creation* of the live element. From a class-oriented perspective attributes are like constructor arguments (also [constructor injection](https://www.martinfowler.com/articles/injection.html#ConstructorInjectionWithPicocontainer)). But before Web Components, [`Element`s](https://developer.mozilla.org/en-US/docs/Web/API/Element) were programmatically created with [`document.createElement()`](https://developer.mozilla.org/en-US/docs/Web/API/Document/createElement) which provided no way of passing constructor arguments. 
+
+Here any configuration has to occur *after* creation via [properties](https://developer.mozilla.org/en-US/docs/Web/API/Element#instance_properties) (also [setter injection](https://www.martinfowler.com/articles/injection.html#SetterInjectionWithSpring); properties are just glorified setters/getters; even back in 2003 it was clear that [getters and setters are evil](https://www.infoworld.com/article/2073723/why-getter-and-setter-methods-are-evil.html)).
+
+With the existance of element properties it is even forgivable to use properties for some mild document interactivity/automation.
+
+But then React popularized the notion of `props` (short for *properties*). They appear in the `class` [constructor](https://react.dev/reference/react/Component#constructor), so they're constructor arguments right? Not exactly. They're just the values React was passed to first render this particular *component* instance. `props` also exists on the *class* instance ([`this`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this#class_context)) but really isn't *owned* by the `class` instance but by React itself as it adjusts `props` whenever something passes new `props` by rendering a [`ReactElement`](https://react.dev/reference/react/createElement#createelement) to update the component instance. So in way `props` is a setter **that is managed by React**.
+
+This enabled the now entrenched CSR [ownership composition pattern](https://shripadk.github.io/react/docs/multiple-components.html#ownership) (as opposed to [`children`](https://github.com/facebook/react/issues/3451#issuecomment-83489825)) of [advancing state](https://twitter.com/_chenglou/status/1701918301839135040) by modifying *ownee* (i.e. the nested component) `props`. With "functions as components" (function components, **not** *functional* components) the role of `props` has been clarified but the practice of component communication via `props` remains.
+
+> What is usually glossed over is that the position of components in the component tree is related to the visual layout of the page which doesn't necessarily lead to the proximity of components that need to communicate with one another for the application to work. 
+
+These inter-component communication requirements are often satiesfied via external state referenced via [context](https://react.dev/learn/passing-data-deeply-with-context).
+
+The *ownership (or nested) composition pattern* tends to also surface in the design of many Web Components. One issue is that the creation values (attributes) are limited to being strings for vanilla WCs. WC-based libraries will often work around this by providing library specific [tagged templates](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#tagged_templates) which create the WC instance behind the scenes to then later provide that instance with any non-string values via its instance *properties*. However the fundamental issue remains. The "actor" *rendering* the component isn't necessary the component (or components) that needs to *communicate* with it during its lifetime within the application.
+
+That is why in this demo components **don't** *communicate* with one another. And while Web Components are `class`-based they are unabled to accept *any* constructor arguments. But thanks to the wonderful weirdness of JavaScript we call declare classes at runtime! That way Web Component classes are not created until the necessary dependencies have been passed to the supporting [module](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules). Now this sequence of operations is followed: 
+- the client side application is *resumed* with the `resume-data` found on the page
+- with the application primed, its services can be passed to create the necessary Web Component classes (e.g. `makeDefinition()`)
+- once the Web Component class is registered it can bind to the existing sites on the DOM but connects directly to the application services to
+    - receive updates during its lifetime from the application
+    - delegate user interactions for interpretation by the application
+
+Note how component rendering has now been completely separated from component updates. So while one WC can render another nested WC it doesn't retain any "ownership" over it. A fresh component instance immediately registers itself with the application which takes ownership. 
+
+Component-orientation often talks about **global state**—here we just call it **the application**. And there is nothing **evil global** about it. During the UI definition phase each component module/factory is injected with exactly the dependencies it needs; nothing less, nothing more. And it's the application that handles all the inter-component communication, so lack of component proximity within the page layout (leading to [prop drilling](https://react.dev/learn/passing-data-deeply-with-context#the-problem-with-passing-props)) isn't an issue. 
