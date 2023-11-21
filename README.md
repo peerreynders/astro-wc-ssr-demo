@@ -301,7 +301,7 @@ export { NAME, makeClass };
 
 Once the `blank` content is cloned, simple selectors can locate the relevant elements in order to fill in the necessary information (here setting the `index` and `id` [data attributes](https://developer.mozilla.org/en-US/docs/Learn/HTML/Howto/Use_data_attributes) and adding the [`Text`](https://developer.mozilla.org/en-US/docs/Web/API/Text) node with the todo's `title`)).
 
-```Astro
+```TypeScript
 // @ts-check
 // file: src/components/todos-view.js
 
@@ -393,13 +393,72 @@ function addItem(cloneBlankItem, list, binders, todo) {
 
 ### 6. Components don't communicate with each other but only with the client side app.
 
-While this example only has one single Web Component the guideline still applies. The component's responsibilities are limited to delegating UI interactions to the client side application and projecting some client side application events to the UI. Any behaviour is extremely shallow and strictly limited to manipulating the DOM in response to “UI bound events” and converting DOM events to “application bound events” ([ Dialog](https://github.com/peerreynders/solid-bookstore-a/blob/main/assets/TheHumbleDialogBox.pdf); rather than [MVC: misunderstood for 37 years](https://paulhammant.com/2015/04/29/mvc-misunderstood-for-37-years/), [MVC past, present and future](https://givan.se/mvc-past-present-and-future/)).
+While this example only has one single Web Component the guideline still applies. The component's responsibilities are limited to delegating UI interactions to the client side application and projecting some client side application events to the UI. Any behaviour is extremely shallow and strictly limited to manipulating the DOM in response to “UI bound events” and converting DOM events to “application bound events” ([Humble Dialog](https://github.com/peerreynders/solid-bookstore-a/blob/main/assets/TheHumbleDialogBox.pdf); rather than [MVC: misunderstood for 37 years](https://paulhammant.com/2015/04/29/mvc-misunderstood-for-37-years/), [MVC past, present and future](https://givan.se/mvc-past-present-and-future/)).
 
 - To be continued
 
-### Some Observations
+### Some Observations (Conclusions)
+
+It needs to be emphasized that with this recipe/approach: 
+- components never communicate with one another, only with (parts of) the application
+- components never render themselves but only render specific parts within their region of control so
+    - component rendering and component behaviour are *separate aspects*
+    - a component factory is expected to be injected with its dependencies during the UI definition phase
+        - the functions to delegate UI events to the client side application
+        - the subscription points (event emitters, signals) to receive updates from the client side application
+        - render functions for its nested parts
+
+So the lifecycle of these components is fairly simple:
+
+1. *Something* renders the component's DOM subtree with a segregated render function (or it appears as part of the DOM from the initial HTML parse).
+2. The registry runs the component's `connectedCallback()` at which point the instance caches critical DOM references and establishes its connection (subscribes to application events) to the client side application.
+3. During the lifetime of the component it delegates UI events to the application and modifies the DOM in response to events/signals from the application. During this time it may render other components within its subtree which may in turn connect to the application themselves.
+4. The registry runs the component's `disconnectedCallback()` so the component disconnects (unsubscribes) from the application events and releases any resources that it may have acquired.
+
+Hypothetically a Web Component can go through multiple `connectCallback`/`disconnectCallback` cycles. If that is likely to happen to any particular component then that must be reflected in its design.
+
+One aspect this demonstration doesn't touch on is client side routing. Here `/` simply *is* the todo list (for the particular browser as tracked by the `__session` cookie); new todos are `POST`ed to `/api/todos` and toggles and deletes are `POST`ed to `/api/todos/{id}`.
+
+This suggests the following sequence of events:
+
+1. An UI event is delegated by a component to the application.
+2. If the UI event only affects extended state, the application simply makes the necessary *volatile* changes. Extended state is not persisted, nor reconstituted when the client is loaded from the identical URL. Any other UI event will effect a route change. Persisting a new state under the current route is handled like a route change. 
+3. Based on the route change the application determines which *additional* data needs to be acquired (or what actions need to be taken).
+4. After the *additional* data has been received (or any necessary actions completed), the application will issue any resulting application events to existing components. 
+5. Some components will simply update their current contents. Others will render new components, perhaps replacing existing ones.
+6. Existing disconnected components will dispose of themselves while new components connect to the client application to receive further updates later.
+7. After completing, the UI is ready for the next UI Event (and the application is ready to accept a server side event that will change the UI).
+
+This also suggests a strong coupling between route management and the client side application. (This is why [Michel Weststrate](https://github.com/mweststrate) replaced React Router with [manual routing](https://github.com/mweststrate/react-mobx-shop/blob/react-amsterdam-2017/src/stores/ViewStore.js) in his [React + MobX Bookshop](https://github.com/mweststrate/react-mobx-shop) demo ([presentation](https://youtu.be/3J9EJrvqOiM), [article](https://michel.codes/blogs/ui-as-an-afterthought)).) However a strict separation of the client application from the [Web APIs](https://developer.mozilla.org/en-US/docs/Web/API) is desirable from the [microtesting](https://youtu.be/H3LOyuqhaJA) perspective (hence the separation of `app/browser.js` from `app/index.js`).
+
+This demo doesn't really use much of the Web Component API. In fact it doesn't even need that API. The [`qsa-observer` variant](qsao/README.md) (increasing the minified bundle by 1.5 kB) implements exactly the same demo without Web Components using [`qsa-observer`](https://github.com/WebReflection/qsa-observer) which itself is based on [`Mutation Observer`](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver). 
+
+But we're really not dealing with components in colloquial sense anymore, are we?
+- The definition of the markdown (and CSS rulesets) is now strictly a server concern
+- The client components depend on templates under the purview of the server that have to be included on the page otherwise the component can't render any nested components.
+- (Whole) component rendering is separate from component behaviour; in fact a component does not render *itself* at all:
+    - It “connects” *after* it's DOM subtree is rendered from elsewhere
+    - After that it updates when [told](https://media.pragprog.com/articles/jan_03_enbug.pdf) by the application.
+
+Entering [Generation 3](https://igor.dev/posts/experiences-web-frameworks-future-me/#return-to-server) server and client need to work more closely together to deliver better and faster UX. Here Web Components are at a distinct disadvantage because they are firmly stuck in [Generation 2](https://igor.dev/posts/experiences-web-frameworks-future-me/#gen2). Sure, [Lit](https://lit.dev/docs/ssr/overview/) will eventually support SSR but now we are no longer *just using the platform* **and** we are forced to run JS on the server anyway (perhaps with a slow or incomplete server side emulation of DOM).
+
+There is no [one web platform](https://www.quirksmode.org/blog/archives/2015/05/tools_dont_solv.html#:~:text=The%20web%20platforms%2C%20plural) but in fact it's a wide spectrum of innumerable combinations of client device capabilities, network conditions and server platforms/technologies. This has been especially true since [mobile reset everything](https://twitter.com/slightlylate/status/1432072075276083205). 
+
+Faced with a similar situation, needing to maximize the performance yielded from commodity hardware found in gaming consoles in 2009 the gamimg industry started to [move from OO to Data-Oriented Design](https://gamesfromwithin.com/data-oriented-design) and embracing the [Entity, Component, System (ECS)](https://medium.com/ingeniouslysimple/entities-components-and-systems-89c31464240d).
+
+> Object-oriented development is good at providing a human oriented representation of the problem in the source code, but **bad at providing a machine representation of the solution**. It is bad at providing a framework for creating an optimal solution, so the question remains: why are game developers still using object-oriented techniques to develop games? It's possible it's not about better design, but instead, making it easier to change the code. It's common knowledge that game developers are constantly changing code to match the natural evolution of the design of the game, right up until launch. Does object-oriented development provide a good way of making maintenance and modification simpler or safer?
+>
+> [Data-Oriented Design: Mapping the problem](https://www.dataorienteddesign.com/dodbook/node12.html#SECTION001220000000000000000)
+
+Of course that approach won't work in web development as there is no one machine to run the clients or the servers on. But there should always be serious considerations of what trade offs are being made. Meanwhile the reported developer convenience of React-style components really hasn't resulted in the desired [trickle-down UX](https://infrequently.org/2023/02/the-market-for-lemons/#:~:text=the%20koans%20of-,trickle%2Ddown%20UX,-%E2%80%94%20it%20can) while the cost to UX has been [reported](https://aerotwist.com/blog/react-plus-performance-equals-what/) [again](https://timkadlec.com/remembers/2020-04-21-the-cost-of-javascript-frameworks/#javascript-main-thread-time) and [again](https://css-tricks.com/radeventlistener-a-tale-of-client-side-framework-performance/).
+
+Web development's pre-occupation with **components** could simply be *bad for creating an optimal solution* for client browsers. Browsers were designed for pages, not components. So for an optimal end user experience use all performant browser features to maximum effect. That includes creating DOM from server rendered HTML whenever reasonable rather than running JavaScript to create it and using CSS that is available before JavaScript even has a chance to run, both of which can proceed to parse and layout before or in [parallel](https://developer.chrome.com/blog/inside-browser-part1/) to JavaScript [downloading, parsing and executing](https://medium.com/@addyosmani/the-cost-of-javascript-in-2018-7d8950fbb5d4#0d36). 
+
+From that perspective [components should ideally vanish at run time](https://betterprogramming.pub/the-real-cost-of-ui-components-6d2da4aba205#36a2).
 
 - To be continued
+
+---
 
 ## Factoring Out TodoContent
 
@@ -1641,7 +1700,7 @@ The history of Web Components goes back to [2011](https://fronteers.nl/congres/2
 
 With the first release of Next.js in ([2016](https://github.com/vercel/next.js/releases/tag/1.0.0)) the writing was on the wall that CSR wasn't enough even for component-oriented architectures. In 2018 [@popeindustries/lit-html-server](https://github.com/popeindustries/lit-html-server) appeared on [npm](https://www.npmjs.com/package/@popeindustries/lit-html-server) for WC SSR ([later](https://www.npmjs.com/package/@popeindustries/lit-html-server) to be included in the [Stack Overflow PWA Demo](https://so-pwa.firebaseapp.com/)), so the shortfall was becoming extremely apparent.
 
-However one idea that didn't seem to catch on was settling on using [`<template>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) elements on the server rendered page to eliminate server and client template duplication, instead forcing the use of JS on the server to run JS Web Components for rendering as the preferred solution. This is likely due to the fact that delegating rendering markup to the server entirely removes the *convenient* “everything **and** the kitchen sink” [collocation](https://tidyfirst.substack.com/p/lumpers-and-splitters) of component-orientation. Framework components have created expections that vanilla Web Components simply cannot meet, while [not all "components" need to be DOM elements](https://youtu.be/BEWkLXU1Wlc?t=6359). 
+However one idea that didn't seem to catch on was settling on using [`<template>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) elements on the server rendered page to eliminate server and client template duplication, instead forcing the use of JS on the server to run JS Web Components for rendering as the preferred solution. This is likely due to the fact that delegating rendering markup to the server entirely removes the *convenient* “everything **and** the kitchen sink” [collocation](https://tidyfirst.substack.com/p/lumpers-and-splitters) of component-orientation. Framework components have created expections that vanilla Web Components simply cannot meet, while [not all "components" need to be DOM elements](https://youtu.be/BEWkLXU1Wlc?t=6359) ([Web Components Aren’t Components](https://keithjgrant.com/posts/2023/07/web-components-arent-components/)). 
 
 There are plenty of competent Web Component analyses around, some of which are:
 - [Why I don't use Web Components (2019)](https://dev.to/richharris/why-i-don-t-use-web-components-2cia)
