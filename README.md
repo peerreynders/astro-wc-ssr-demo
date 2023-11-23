@@ -395,7 +395,60 @@ function addItem(cloneBlankItem, list, binders, todo) {
 
 While this example only has one single Web Component the guideline still applies. The component's responsibilities are limited to delegating UI interactions to the client side application and projecting some client side application events to the UI. Any behaviour is extremely shallow and strictly limited to manipulating the DOM in response to “UI bound events” and converting DOM events to “application bound events” ([Humble Dialog](https://github.com/peerreynders/solid-bookstore-a/blob/main/assets/TheHumbleDialogBox.pdf); rather than [MVC: misunderstood for 37 years](https://paulhammant.com/2015/04/29/mvc-misunderstood-for-37-years/), [MVC past, present and future](https://givan.se/mvc-past-present-and-future/)).
 
-- To be continued
+To demonstrate the point the example was further reworked in [factoring out TodoContent](#factoring-out-todocontent) and [factoring out TodoNew](#factoring-out-todonew) to yield the `todo-new` and `todo-list` Web Components. Subsequently:
+
+```JavaScript
+// @ts-check
+// file: src/client/entry.js
+import { makeTodoActions } from './app/browser';
+import { makeApp } from './app/index';
+import { define } from './components/registry';
+import * as todoNew from './components/todo-new';
+import * as todoContent from './components/todo-content';
+import * as todoList from './components/todo-list';
+
+function assembleApp() {
+  const actions = makeTodoActions('/api/todos');
+  return makeApp({
+    addTodo: actions.addTodo,
+    removeTodo: actions.removeTodo,
+    toggleTodo: actions.toggleTodo,
+  });
+}
+
+/** @param { ReturnType<typeof makeApp> } app
+ *  @returns { void }
+ */
+function hookupUI(app) {
+  const itemContent = todoContent.makeSupport();
+
+  define(todoNew.makeDefinition({
+    addTodo: app.addTodo,
+    subscribeStatus: app.subscribeStatus,
+  }));
+
+  define(todoList.makeDefinition({
+    content: {
+      render: itemContent.render,
+      from: itemContent.fromContent,
+      selector: itemContent.selectorRoot,
+    },
+    removeTodo: app.removeTodo,
+    toggleTodo: app.toggleTodo,
+    subscribeStatus: app.subscribeStatus,
+    subscribeTodoEvent: app.subscribeTodoEvent,
+  }));
+}
+
+const app = assembleApp();
+hookupUI(app);
+
+app.start();
+```
+
+The `todo-list` definition is supplied with functions to initiate the removal and toggling of a `todo`. It also gets access to the subscription point for `TodoEvent`s which notifies it when a todo has been successfully removed, toggled or created. It monitors the available `status` so that it can diasable the toggle checkboxes and remove buttons whenever the application isn't ready.
+
+The `todo-new` definition also includes subscription the point for the available `status`; not only does it disable the `c-todo-new__submit` button whenever the application isn't ready but it also activates the spinner (`js:c-todo-new--wait`) specifically for the wait status. It is supplied with the function needed to initiate the creation of a new todo.
 
 ### Some Observations (Conclusions)
 
@@ -450,7 +503,7 @@ Faced with a similar situation, needing to maximize the performance yielded from
 >
 > [Data-Oriented Design: Mapping the problem](https://www.dataorienteddesign.com/dodbook/node12.html#SECTION001220000000000000000)
 
-Of course that approach won't work in web development as there is no one machine to run the clients or the servers on. But there should always be serious considerations of what trade offs are being made. Meanwhile the reported developer convenience of React-style components really hasn't resulted in the desired [trickle-down UX](https://infrequently.org/2023/02/the-market-for-lemons/#:~:text=the%20koans%20of-,trickle%2Ddown%20UX,-%E2%80%94%20it%20can) while the cost to UX has been [reported](https://aerotwist.com/blog/react-plus-performance-equals-what/) [again](https://timkadlec.com/remembers/2020-04-21-the-cost-of-javascript-frameworks/#javascript-main-thread-time) and [again](https://css-tricks.com/radeventlistener-a-tale-of-client-side-framework-performance/).
+Of course that approach won't work in web development as there is no one machine to run the clients or the servers on. But there should always be serious considerations of what trade offs are being made. Meanwhile the reported developer convenience of React-style components really hasn't resulted in the desired [trickle-down UX](https://infrequently.org/2023/02/the-market-for-lemons/#:~:text=the%20koans%20of-,trickle%2Ddown%20UX,-%E2%80%94%20it%20can) while the cost to UX has been [reported](https://aerotwist.com/blog/react-plus-performance-equals-what/) [again](https://timkadlec.com/remembers/2020-04-21-the-cost-of-javascript-frameworks/#javascript-main-thread-time) and [again](https://css-tricks.com/radeventlistener-a-tale-of-client-side-framework-performance/) (though to some extend the "ecosystem" [is to blame as well](https://twitter.com/dan_abramov/status/1259618524751958016)).
 
 Web development's pre-occupation with **components** could simply be *bad for creating an optimal solution* for client browsers. Browsers were designed for pages, not components. So for an optimal end user experience use all performant browser features to maximum effect. That includes creating DOM from server rendered HTML whenever reasonable rather than running JavaScript to create it and using CSS that is available before JavaScript even has a chance to run, both of which can proceed to parse and layout before or in [parallel](https://developer.chrome.com/blog/inside-browser-part1/) to JavaScript [downloading, parsing and executing](https://medium.com/@addyosmani/the-cost-of-javascript-in-2018-7d8950fbb5d4#0d36). 
 
