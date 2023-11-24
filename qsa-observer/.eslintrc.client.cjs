@@ -10,11 +10,13 @@ module.exports = {
 		'FormData': 'readonly',
 		'HTMLButtonElement': 'readonly',
 		'HTMLElement': 'readonly',
+		'HTMLFormElement': 'readonly',
 		'HTMLInputElement': 'readonly',
 		'HTMLLabelElement': 'readonly',
 		'HTMLLIElement': 'readonly',
 		'HTMLTemplateElement': 'readonly',
 		'HTMLUListElement': 'readonly',
+		'self': 'readonly',
 		'Text': 'readonly',
 	}
 };

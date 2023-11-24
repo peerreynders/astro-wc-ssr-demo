@@ -16,5 +16,5 @@
 		"declaration": true,
 		"outDir": "types"
 	},
-	"files": ["./entry.js", "../../.astro/types.d.ts","qsa-observer.d.ts" ]
+	"files": ["./entry.js", "../../.astro/types.d.ts", "qsa-observer.d.ts"]
 }

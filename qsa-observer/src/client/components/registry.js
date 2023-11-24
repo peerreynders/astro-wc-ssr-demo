@@ -26,7 +26,7 @@ const qsao = Qsao({
  *    spec: Spec;
  * }} component
  */
-const define = ({selector, spec}) => {
+const define = ({ selector, spec }) => {
 	if (query.includes(selector)) return;
 
 	query.push(selector);

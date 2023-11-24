@@ -1,3 +1,4 @@
+// file: src/app/available-status.ts
 const availableStatus = {
 	UNAVAILABLE: -1,
 	WAIT: 0,

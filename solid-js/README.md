@@ -1,47 +1,28 @@
-# Astro Starter Kit: Minimal
+# astro-wc-ssr-demo (`solid-js` variant)
+- [Web Component](../wc/README.md) variant
+- [qsa-observer](../qsa-observer/README.md) variant
+- Top level [README](../README.md)
 
-```sh
-npm create astro@latest -- --template minimal
+```shell
+$ cd astro-wc-ssr-demo/solid-js
+astro-wc-ssr-demo/solid-js$ npm i
+
+added 727 packages, and audited 729 packages in 45s
+
+235 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+astr-wc-ssr-demo/solid-js$ npm run dev
+
+> astro-wc-ssr-demo-solid-js@0.0.0 dev
+> astro dev
+
+  🚀  astro  v3.6.0 started in 174ms
+  
+  ┃ Local    http://localhost:4321/
+  ┃ Network  use --host to expose
+  
+04:36:47 p.m. [content] Watching src/content/ for changes
+04:36:48 p.m. [content] Types generated
 ```
-
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/minimal)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/minimal)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/minimal/devcontainer.json)
-
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
-
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

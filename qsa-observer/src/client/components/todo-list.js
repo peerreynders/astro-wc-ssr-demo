@@ -183,8 +183,8 @@ function dispatchIntent(toggleTodo, removeTodo, binders, target) {
 		target instanceof HTMLInputElement
 			? [(binder) => binder.completed === target, false, target.checked]
 			: target instanceof HTMLButtonElement
-			? [(binder) => binder.remove === target, true, false]
-			: [undefined, false, false];
+			  ? [(binder) => binder.remove === target, true, false]
+			  : [undefined, false, false];
 
 	if (predicate === undefined) return false;
 
@@ -328,7 +328,7 @@ function makeDefinition({
 	const instances = new Map();
 
 	/** @type {Spec} */
-	const spec = {	
+	const spec = {
 		connectedCallback(root) {
 			if (!(root instanceof HTMLUListElement))
 				throw new Error('Unexpected root element type');
@@ -362,8 +362,8 @@ function makeDefinition({
 			binder.root.removeEventListener('click', binder);
 			binder.unsubscribeStatus?.();
 			binder.unsubscribeTodoEvent?.();
-		}
-	}
+		},
+	};
 
 	return {
 		selector: SELECTOR_ROOT,

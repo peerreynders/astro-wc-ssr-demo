@@ -29,8 +29,8 @@ function onAvailable(binder, status) {
 		status === availableStatus.READY
 			? [false, false]
 			: status === availableStatus.WAIT
-			? [true, true]
-			: [true, false];
+			  ? [true, true]
+			  : [true, false];
 
 	binder.submit.classList.toggle(MODIFIER_WAIT, wait);
 

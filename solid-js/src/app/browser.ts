@@ -1,3 +1,4 @@
+// file: src/app/browser.ts
 import type { ToggleTodo } from './types';
 import type { Todo } from '../types';
 

@@ -9,6 +9,7 @@ module.exports = {
 		'fetch': 'readonly',
 		'FormData': 'readonly',
 		'HTMLButtonElement': 'readonly',
+		'HTMLFormElement': 'readonly',
 		'HTMLElement': 'readonly',
 		'HTMLInputElement': 'readonly',
 		'HTMLLabelElement': 'readonly',

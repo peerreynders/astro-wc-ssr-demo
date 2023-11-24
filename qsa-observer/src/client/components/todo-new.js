@@ -31,8 +31,8 @@ function onAvailable(binder, status) {
 		status === availableStatus.READY
 			? [false, false]
 			: status === availableStatus.WAIT
-			? [true, true]
-			: [true, false];
+			  ? [true, true]
+			  : [true, false];
 
 	binder.submit.classList.toggle(MODIFIER_WAIT, wait);
 
@@ -75,7 +75,7 @@ function makeDefinition({ addTodo, subscribeStatus }) {
 	const instances = new Map();
 
 	/** @type {Spec} */
-	const spec = {	
+	const spec = {
 		connectedCallback(root) {
 			if (!(root instanceof HTMLFormElement))
 				throw new Error('Unexpected root element type');
@@ -112,8 +112,8 @@ function makeDefinition({ addTodo, subscribeStatus }) {
 			instances.delete(binder.root);
 			binder.submit.removeEventListener('click', binder);
 			binder.unsubscribeStatus?.();
-		}
-	}
+		},
+	};
 
 	return {
 		selector: SELECTOR_ROOT,

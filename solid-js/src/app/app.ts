@@ -1,9 +1,9 @@
+// file: src/app/app.ts
 import { availableStatus, type AvailableStatus } from './available-status';
 import { createEffect, createSignal, createResource } from 'solid-js';
 import { createStore, reconcile } from 'solid-js/store';
 
-import type { ToggleTodo } from './types';
-import type { Todo } from '../types';
+import type { Todo, TodoActions, ToggleTodo } from './types';
 
 function findTodoById(todos: Todo[], id: string) {
 	for (let i = 0; i < todos.length; i += 1) if (todos[i].id === id) return i;
@@ -18,16 +18,9 @@ function findByIndex(todos: Todo[], index: number) {
 	return 0;
 }
 
-function makeApp(
-	actions: {
-		addTodo: (title: string) => Promise<Todo>;
-		removeTodo: (id: string) => Promise<string>;
-		toggleTodo: (toggle: ToggleTodo) => Promise<Todo>;
-	},
-	initialState: Todo[]
-) {
-	let rawTodos = initialState;
-	const [todos, setTodos] = createStore(rawTodos);
+function makeApp(actions: TodoActions, initialState: Todo[]) {
+	let items = initialState;
+	const [todos, setTodos] = createStore(items);
 
 	const [status, setStatus] = createSignal<AvailableStatus>(
 		availableStatus.UNAVAILABLE
@@ -41,9 +34,9 @@ function makeApp(
 		const todo = addedNew();
 		if (!todo) return;
 
-		const i = findByIndex(rawTodos, todo.index);
-		rawTodos = rawTodos.toSpliced(i, 0, todo);
-		setTodos(reconcile(rawTodos));
+		const i = findByIndex(items, todo.index);
+		items = items.toSpliced(i, 0, todo);
+		setTodos(reconcile(items));
 	});
 
 	const [removeId, setRemoveId] = createSignal<string>();
@@ -52,11 +45,11 @@ function makeApp(
 		const id = removedById();
 		if (typeof id !== 'string') return;
 
-		const i = findTodoById(rawTodos, id);
+		const i = findTodoById(items, id);
 		if (i < 0) return;
 
-		rawTodos = rawTodos.toSpliced(i, 1);
-		setTodos(reconcile(rawTodos));
+		items = items.toSpliced(i, 1);
+		setTodos(reconcile(items));
 	});
 
 	const [toggle, setToggle] = createSignal<ToggleTodo>();
@@ -65,12 +58,12 @@ function makeApp(
 		const todo = toggled();
 		if (!todo) return;
 
-		const i = findTodoById(rawTodos, todo.id);
-		if (i < 0 || rawTodos[i].completed === todo.completed) return;
+		const i = findTodoById(items, todo.id);
+		if (i < 0 || items[i].completed === todo.completed) return;
 
-		rawTodos[i].completed = todo.completed;
-		rawTodos = rawTodos.slice();
-		setTodos(reconcile(rawTodos));
+		items[i].completed = todo.completed;
+		items = items.slice();
+		setTodos(reconcile(items));
 	});
 
 	createEffect(function adjustAvailableStatus() {

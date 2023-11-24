@@ -3,6 +3,7 @@ tl;dr—[`<template>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element
 
 - [Web Component](wc/README.md) variant
 - [`qsa-observer`](qsa-observer/README.md) variant
+- [SolidJS](solid-js/README.md) variant
 
 The following will discuss a recipe for implementing server rendered Web Components with any server language of choice (while commenting on some the ongoing trends in the Web Component narrative); i.e. without being locked into running JS on the server.
 [Astro](https://astro.build/) is just used as a convenient server platform/templating engine but no "Web Component JS code" is run on the server (i.e. [isomorphic JS](https://en.wikipedia.org/wiki/Isomorphic_JavaScript) isn't a requirement).

@@ -181,8 +181,8 @@ function dispatchIntent(toggleTodo, removeTodo, binders, target) {
 		target instanceof HTMLInputElement
 			? [(binder) => binder.completed === target, false, target.checked]
 			: target instanceof HTMLButtonElement
-			? [(binder) => binder.remove === target, true, false]
-			: [undefined, false, false];
+			  ? [(binder) => binder.remove === target, true, false]
+			  : [undefined, false, false];
 
 	if (predicate === undefined) return false;
 

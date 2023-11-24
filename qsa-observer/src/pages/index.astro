@@ -7,7 +7,7 @@ import TodoList from '../components/todo-list.astro';
 import { selectTodos } from './todos-store';
 
 const todos = await selectTodos(Astro.locals.sessionId);
-const title = `Astro "QSAO: zero to hero" Todos`;
+const title = `Astro "qsa-observer: zero to hero" Todos`;
 ---
 
 <Base {title}>
