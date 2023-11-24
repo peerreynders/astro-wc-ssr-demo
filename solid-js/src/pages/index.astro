@@ -1,0 +1,19 @@
+---
+// file: src/pages/index.astro
+import Base from '../layouts/base.astro';
+import { App, makeResumeState } from '../app';
+import { selectTodos } from './todos-store';
+
+const resumeState = makeResumeState(await selectTodos(Astro.locals.sessionId));
+const title = `Astro "solid-js: zero to hero" Todos`;
+const todosApiHref = '/api/todos';
+---
+
+<Base {title}>
+	<main>
+		<h3>{title}</h3>
+		<br />
+		<h1>To do</h1>
+		<App {todosApiHref} {resumeState} client:load />
+	</main>
+</Base>

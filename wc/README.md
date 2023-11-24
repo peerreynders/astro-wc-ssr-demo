@@ -1,5 +1,5 @@
 # astro-wc-ssr-demo (Web Component variant)
-- [`qsa-observer`](../qsao/README.md) variant
+- [`qsa-observer`](../qsa-observer/README.md) variant
 - Top level [README](../README.md)
 
 ```shell

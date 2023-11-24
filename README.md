@@ -2,7 +2,7 @@
 tl;dr—[`<template>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) and the `HTMLTemplateElement` [`content`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLTemplateElement/content) property in combination with the `Node` [`cloneNode()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/cloneNode) method are probably the best bits to come out of the [Web Component API](https://developer.mozilla.org/en-US/docs/Web/API/Web_components#html_templates).
 
 - [Web Component](wc/README.md) variant
-- [`qsa-observer`](qsao/README.md) variant
+- [`qsa-observer`](qsa-observer/README.md) variant
 
 The following will discuss a recipe for implementing server rendered Web Components with any server language of choice (while commenting on some the ongoing trends in the Web Component narrative); i.e. without being locked into running JS on the server.
 [Astro](https://astro.build/) is just used as a convenient server platform/templating engine but no "Web Component JS code" is run on the server (i.e. [isomorphic JS](https://en.wikipedia.org/wiki/Isomorphic_JavaScript) isn't a requirement).
@@ -484,7 +484,7 @@ This suggests the following sequence of events:
 
 This also suggests a strong coupling between route management and the client side application. (This is why [Michel Weststrate](https://github.com/mweststrate) replaced React Router with [manual routing](https://github.com/mweststrate/react-mobx-shop/blob/react-amsterdam-2017/src/stores/ViewStore.js) in his [React + MobX Bookshop](https://github.com/mweststrate/react-mobx-shop) demo ([presentation](https://youtu.be/3J9EJrvqOiM), [article](https://michel.codes/blogs/ui-as-an-afterthought)).) However a strict separation of the client application from the [Web APIs](https://developer.mozilla.org/en-US/docs/Web/API) is desirable from the [microtesting](https://youtu.be/H3LOyuqhaJA) perspective (hence the separation of `app/browser.js` from `app/index.js`).
 
-This demo doesn't really use much of the Web Component API. In fact it doesn't even need that API. The [`qsa-observer` variant](qsao/README.md) (increasing the minified bundle by 1.5 kB) implements exactly the same demo without Web Components using [`qsa-observer`](https://github.com/WebReflection/qsa-observer) which itself is based on [`Mutation Observer`](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver). 
+This demo doesn't really use much of the Web Component API. In fact it doesn't even need that API. The [`qsa-observer` variant](qsa-observer/README.md) (increasing the minified bundle by 1.5 kB) implements exactly the same demo without Web Components using [`qsa-observer`](https://github.com/WebReflection/qsa-observer) which itself is based on [`Mutation Observer`](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver). 
 
 But we're really not dealing with components in colloquial sense anymore, are we?
 - The definition of the markdown (and CSS rulesets) is now strictly a server concern
