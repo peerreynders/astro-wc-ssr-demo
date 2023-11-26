@@ -3,7 +3,6 @@ import { createContext, useContext } from 'solid-js';
 import { isServer } from 'solid-js/web';
 import { makeTodoActions } from '../browser';
 import { makeApp } from '../app';
-import { TodoContent } from './components/todo-content';
 
 import type { Context, ParentProps } from 'solid-js';
 import type { AppProps, ConduitContent } from '../types';
@@ -16,7 +15,6 @@ function ConduitProvider(props: ParentProps<AppProps>) {
 	const conduit = {
 		addTodo: app.addTodo,
 		removeTodo: app.removeTodo,
-		renderTodoContent: TodoContent,
 		status: app.status,
 		todos: app.todos,
 		toggleTodo: app.toggleTodo,

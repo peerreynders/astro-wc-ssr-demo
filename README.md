@@ -14,7 +14,7 @@ Even when it comes to μ-frontends, the going recommendation is to stick to one,
 
 The argument that any Web Component based framework will be comparatively [longer-lived](https://jakelazaroff.com/words/web-components-will-outlive-your-javascript-framework/) because "it's based on a platform standard" is also more than a little bit disingenuous ([AppCache](https://web.archive.org/web/20210603132501/https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache) ([2018](https://groups.google.com/a/chromium.org/g/blink-dev/c/FvM-qo7BfkI/m/0daqyD8kCQAJ)) would like [a word](https://youtu.be/zCXMh5K5hKQ)); Polymer in particular went through a number of major revisions over the years (1.0 (2015), 2.0 (2017), 3.0 (2018), lit-html (2017), Lit 1.0 (2019), Lit 2.0 (2021), Lit 3.0 (2023)).
 
-This particular example is based on a reworked version of the [Web Components: From zero to hero](https://thepassle.github.io/webcomponents-from-zero-to-hero/) tutorial. Like most tutorials of this kind, it's shamelessly component-oriented ([centric](https://twitter.com/acemarke/status/1056669495354421249)) and by extension [client-side rendered (CSR)](https://www.patterns.dev/react/client-side-rendering) focused (very [pre-2016](https://github.com/vercel/next.js/releases/tag/1.0.0) and firmly rooted in the traditions of the [desktop web](https://youtu.be/wsdPeC86OH0?t=472)). *Continued in [More Thoughts on Web Components](#more-thoughts-on-web-components).*
+This particular example is based on a reworked version of the [Web Components: From zero to hero](https://thepassle.github.io/webcomponents-from-zero-to-hero/) tutorial. Like most tutorials of this kind, it's unabashedly component-oriented ([centric](https://twitter.com/acemarke/status/1056669495354421249)) and by extension [client-side rendered (CSR)](https://www.patterns.dev/react/client-side-rendering) focused (very [pre-2016](https://github.com/vercel/next.js/releases/tag/1.0.0) and firmly rooted in the traditions of the [desktop web](https://youtu.be/wsdPeC86OH0?t=472)). *Continued in [More Thoughts on Web Components](#more-thoughts-on-web-components).*
 
 ## The Recipe
 
@@ -508,9 +508,357 @@ Of course that approach won't work in web development as there is no one machine
 
 Web development's pre-occupation with **components** could simply be *bad for creating an optimal solution* for client browsers. Browsers were designed for pages, not components. So for an optimal end user experience use all performant browser features to maximum effect. That includes creating DOM from server rendered HTML whenever reasonable rather than running JavaScript to create it and using CSS that is available before JavaScript even has a chance to run, both of which can proceed to parse and layout before or in [parallel](https://developer.chrome.com/blog/inside-browser-part1/) to JavaScript [downloading, parsing and executing](https://medium.com/@addyosmani/the-cost-of-javascript-in-2018-7d8950fbb5d4#0d36). 
 
-From that perspective [components should ideally vanish at run time](https://betterprogramming.pub/the-real-cost-of-ui-components-6d2da4aba205#36a2).
+From that perspective [components should ideally vanish at run time](https://betterprogramming.pub/the-real-cost-of-ui-components-6d2da4aba205#36a2). If we already have to settle for running JavaScript on the server to support SSR then it's reasonable to choose a framework that is performant in that regard (e.g. by rendering directly to (HTML) string rather than through a DOM emulation; [MarkoJS](https://github.com/marko-js/isomorphic-ui-benchmarks#user-content-current-results) is probably one of the best in this regard). 
 
-- To be continued
+[SolidJS](https://www.solidjs.com/) has performant [SSR](https://www.solidjs.com/), is [supported by Astro](https://docs.astro.build/en/guides/integrations-guide/solid-js/) (and will feature a broader set of capabilities with [SolidStart](https://start.solidjs.com/)). More importantly because it's a [**state** library that happens to *render*](https://www.youtube.com/watch?v=I6L29qSTaFA&t=15472s) it readily supports the [segregated UI](https://michel.codes/blogs/ui-as-an-afterthought) approach.
+
+To be clear, the [WC](wc/README.md) and [`qsa-observer`](qsa-observer/README.md) variants don't have any client side state beyond the todo IDs that are stored in DOM [data attributes](https://developer.mozilla.org/en-US/docs/Learn/HTML/Howto/Use_data_attributes). However, that [lean](https://leanweb.dev/talk/), handcrafted approach doesn't offer any other exploitable features.
+
+Thanks to Solid's client side [signals and stores](https://docs.solidjs.com/references/concepts/reactivity#reactive-primitives), dependencies no longer have to explicitly subscribe to change; under a [tracking](https://docs.solidjs.com/references/concepts/reactivity/tracking) scope change subscription and propagation is automatic. Its practice of [read/write segregation](https://docs.solidjs.com/guides/foundations/thinking-solid#3-readwrite-segregation) makes it a lot easier to *use and grant mutability more responsibly*. 
+
+This is what the [SolidJS variant's](solid-js/README.md) core app looks like:
+
+```TypeScript
+// file: src/app/app.ts
+import { availableStatus, type AvailableStatus } from './available-status';
+import { createEffect, createSignal, createResource } from 'solid-js';
+import { createStore, reconcile } from 'solid-js/store';
+
+import type { NewTodo, Todo, TodoActions, ToggleTodo } from './types';
+
+function findTodoById(todos: Todo[], id: string) {
+  for (let i = 0; i < todos.length; i += 1) if (todos[i].id === id) return i;
+
+  return -1;
+}
+
+function findByIndex(todos: Todo[], index: number) {
+  for (let i = todos.length - 1; i > -1; i -= 1)
+    if (todos[i].index <= index) return i + 1;
+
+  return 0;
+}
+
+function makeApp(actions: TodoActions, initialState: Todo[]) {
+  let items = initialState;
+  const [todos, setTodos] = createStore(items);
+
+  const [status, setStatus] = createSignal<AvailableStatus>(
+    availableStatus.UNAVAILABLE
+  );
+  const readyStatus = () => setStatus(availableStatus.READY);
+  const waitStatus = () => setStatus(availableStatus.WAIT);
+
+  const [addNew, setAddNew] = createSignal<NewTodo>();
+  const [addedNew] = createResource(addNew, actions.addTodo);
+  createEffect(function addNewTodo() {
+    const todo = addedNew();
+    if (!todo) return;
+
+    const i = findByIndex(items, todo.index);
+    items.splice(i, 0, todo);
+    setTodos(reconcile(items));
+  });
+
+  const [removeId, setRemoveId] = createSignal<string>();
+  const [removedById] = createResource(removeId, actions.removeTodo);
+  createEffect(function removeFromTodos() {
+    const id = removedById();
+    if (typeof id !== 'string') return;
+
+    const i = findTodoById(items, id);
+    if (i < 0) return;
+
+    items.splice(i, 1);
+    setTodos(reconcile(items));
+  });
+
+  const [toggle, setToggle] = createSignal<ToggleTodo>();
+  const [toggled] = createResource(toggle, actions.toggleTodo);
+  createEffect(function toggleTodo() {
+    const todo = toggled();
+    if (!todo) return;
+
+    const i = findTodoById(items, todo.id);
+    if (i < 0 || items[i].completed === todo.completed) return;
+
+    items[i] = todo;
+    setTodos(reconcile(items));
+  });
+
+  createEffect(function adjustAvailableStatus() {
+    if (addedNew.loading || removedById.loading || toggled.loading)
+      waitStatus();
+    else readyStatus();
+  });
+
+  const addTodo = (title: string) => {
+    setAddNew({ title });
+  };
+
+  const removeTodo = (id: string) => {
+    setRemoveId(id);
+  };
+
+  const toggleTodo = (toggle: ToggleTodo) => {
+    setToggle(toggle);
+  };
+
+  const start = () => {
+    if (status() !== availableStatus.UNAVAILABLE) return;
+    readyStatus();
+  };
+
+  return {
+    todos,
+    addTodo,
+    removeTodo,
+    toggleTodo,
+    status,
+    start,
+  };
+}
+export { makeApp };
+```
+- The todo items are exposed via a [store](https://docs.solidjs.com/references/api-reference/stores/using-stores). Note how only the readonly `todos: Store<Todo[]>` is exposed to the outside while the `setTodos: SetStoreFunction<Todo[]>` is only used within the `addNewTodo` and `removeFromTodos` [effects](https://docs.solidjs.com/references/concepts/reactivity#effects).
+- The `AvailableStatus` is exposed via the [`Accessor`](https://docs.solidjs.com/references/api-reference/basic-reactivity/createSignal) of a [signal](https://docs.solidjs.com/references/concepts/reactivity#signals). The `Setter` is incorporated into the internal convenience functions `readyStatus` and `waitStatus`.
+- `addedNew`'s [resource](https://docs.solidjs.com/guides/foundations/solid-primitives#createresource) is driven by the `addNew` accessor. The idea is to request a new todo from the server whenever a new (i.e. [different](https://docs.solidjs.com/references/api-reference/basic-reactivity/createSignal#options)) `NewTodo` is set with the `setAddNew` setter (via the exposed `addTodo` function). Once the resource is loaded the `addNewTodo` [effect](https://docs.solidjs.com/references/api-reference/basic-reactivity/createEffect) is executed. `findByIndex` finds the insertion position inside the ordered array, inserting the new todo with [`splice()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice) among the pre-existing ones. Finally [`reconcile`](https://www.solidjs.com/docs/latest/api#reconcile) is used to ensure that the `setTodos` update is as fine-grained as possible (minimizing any upstream changes to the DOM).
+- `removedById`'s resource is driven by the `removeId` accessor. When a new todo ID appears on `removeId` (via the exposed `removeTodo` function) the resource triggers the `removeTodo` action. When the delete has been confirmed the specified todo is removed from the client side `todos` inside the `removeFromTodos` effect.
+- `toggled`'s resource is driven by the `toggle` accessor. When a new `ToggleTodo` appears on `toggle` (via the exposed `toggleTodo` function) the resource triggers the `toggleTodo` action. When the action has been confirmed the latest todo is replaced in `todos` within the `toggleTodo` effect.
+- The `adjustAvailableStatus` effect executes `waitStatus` whenever one of `addedNewTodo`, `removedById` or `toggled` is loading. Once **all** of them are not loading `readyStatus` is executed. 
+- The wrapping `removeTodo` and `toggleTodo` functions simply demonstrate how *the app* retains ultimate control over it's own signal `Setter`s. 
+
+The Astro page:
+
+```Astro
+---
+// file: src/pages/index.astro
+import Base from '../layouts/base.astro';
+import { App, makeResumeState } from '../app/ui/app';
+import { selectTodos } from './todos-store';
+
+const resumeState = makeResumeState(await selectTodos(Astro.locals.sessionId));
+const title = `Astro "solid-js: zero to hero" Todos`;
+const todosApiHref = '/api/todos';
+---
+
+<Base {title}>
+  <main>
+    <h3>{title}</h3>
+    <br />
+    <h1>To do</h1>
+    <App client:load {todosApiHref} {resumeState} />
+  </main>
+</Base>
+```
+
+The SolidJS `App` is composed into the static portion of the page as a [framework component](https://docs.astro.build/en/core-concepts/framework-components/). The `client:load` [client directive](https://docs.astro.build/en/reference/directives-reference/#client-directives) ensures that *the app* is [hydrated](https://dev.to/this-is-learning/why-efficient-hydration-in-javascript-frameworks-is-so-challenging-1ca3) client side. `makeResumeState` transforms (in this case  it doesn't do anything) the server side todos into client state (`resumeState`) which is then used for:
+1. the server side render
+2. client side hydration (i.e. it's included in the rendered page).
+
+`todoApiHref` is also passed as a prop to configure the (`addTodo`, `removeTodo`, `toggleTodo`) actions.
+
+The `ui/app.tsx` component:
+
+```TypeScript
+// file: src/app/ui/app.tsx
+import { ConduitProvider } from './conduit';
+import { TodoNew } from './todo-new';
+import { TodoList } from './todo-list';
+import type { AppProps, Todo } from '../types';
+
+function makeResumeState(todos: Todo[]) {
+  // i.e. transform the inputs to the
+  // client application's initial state.
+  // In this case there is nothing to do.
+  return todos;
+}
+
+function App(props: AppProps) {
+  return (
+    <ConduitProvider {...props}>
+      <TodoNew />
+      <TodoList />
+    </ConduitProvider>
+  );
+}
+
+export { App, makeResumeState };
+```
+
+`App` composes the `Conduit` [context](https://docs.solidjs.com/references/concepts/state-management/context) with the [niladic](https://www.logicroom.co/blog/upgrade-your-react-ui-architecture#:~:text=is...%20none.-,Niladic,-The%20moment%20we) `TodoNew` and `TodoList` UI components.
+
+It should be noted that the `Conduit` value will **never** change once the component tree is created. App-bound data propagates via any functions that are exposed on the `Conduit` while component-bound data propagates along reactive signals and stores on the `Conduit`. The `Conduit` aggregates any information needed on the app-component highway in order to avoid [*Context Hell*](https://gist.github.com/zerkalica/e88192cf7adef439c9f0faab9235c0ba).
+
+The tradeoff is the introduction of niladic UI components (i.e. in the `app/ui` directory) that act as a [gateway](https://martinfowler.com/eaaCatalog/gateway.html)s for the props-only (context-free) components (under `app/ui/components`). These UI components are simple wrappers that narrow the `Conduit` interface (and apply transformations if necessary) to the props for the component(s) they delegate to; The represent the [boundary](https://martinfowler.com/bliki/SegregatedDOM.html) between the application logic and the UI logic.
+
+The `Conduit` context:
+
+```TypeScript
+// file: src/app/ui/conduit.tsx
+import { createContext, useContext } from 'solid-js';
+import { isServer } from 'solid-js/web';
+import { makeTodoActions } from '../browser';
+import { makeApp } from '../app';
+
+import type { Context, ParentProps } from 'solid-js';
+import type { AppProps, ConduitContent } from '../types';
+
+const ConduitContext: Context<ConduitContent | undefined> = createContext();
+
+function ConduitProvider(props: ParentProps<AppProps>) {
+  const actions = makeTodoActions(props.todosApiHref);
+  const app = makeApp(actions, props.resumeState);
+  const conduit = {
+    addTodo: app.addTodo,
+    removeTodo: app.removeTodo,
+    status: app.status,
+    todos: app.todos,
+    toggleTodo: app.toggleTodo,
+  };
+
+  if (!isServer) {
+    // let hydration finish
+    setTimeout(app.start);
+  }
+
+  return (
+    <ConduitContext.Provider value={conduit}>
+      {props.children}
+    </ConduitContext.Provider>
+  );
+}
+
+function useConduit() {
+  const conduit = useContext(ConduitContext);
+  if (!conduit) throw Error('Conduit is not instantiated yet');
+
+  return conduit;
+}
+
+export { ConduitProvider, useConduit };
+```
+
+The provider assembles the `src/app.ts` and places any pertinent app properties on the `Conduit` value, exposing it to the entire component tree.
+
+`app/ui/todo-list.tsx` is an example of a UI component that taps into the `Conduit` context.
+
+```TypeScript
+// file: src/app/ui/todo-list.tsx
+import { useConduit } from './conduit';
+import { TodoContent } from './components/todo-content';
+import { TodoList as Component } from './components/todo-list';
+
+function TodoList() {
+  const conduit = useConduit();
+
+  return (
+    <Component
+      removeTodo={conduit.removeTodo}
+      toggleTodo={conduit.toggleTodo}
+      renderContent={TodoContent}
+      status={conduit.status}
+      todos={conduit.todos}
+    />
+  );
+}
+
+export { TodoList };
+```
+
+It supplies `app/ui/components/todo-list.tsx` with the necessary props from `Conduit` and applies `TodoContent` as the `renderContent` [render prop](https://www.patterns.dev/react/render-props-pattern/). 
+
+Finally the `app/ui/components/todo-list.tsx` leaf component:
+
+```TypeScript
+// file: src/app/ui/components/todo-list.tsx
+import { For } from 'solid-js';
+import { availableStatus, type AvailableStatus } from '../../available-status';
+
+import type { Accessor, JSX } from 'solid-js';
+import type { Todo, ToggleTodo } from '../../types';
+
+type Props = {
+  removeTodo: (id: string) => void;
+  toggleTodo: (toggle: ToggleTodo) => void;
+  renderContent: (props: { todo: Todo }) => JSX.Element;
+  status: Accessor<AvailableStatus>;
+  todos: Todo[];
+};
+
+function TodoList(props: Props) {
+  // Demonstrate event delegation
+  const handleEvent = (event: Event) => {
+    if (event.type != 'click') return;
+
+    if (event.target instanceof HTMLButtonElement) {
+      const parent = event.target.parentElement;
+      if (!parent) return;
+
+      const checkbox = parent.querySelector('input[type="checkbox"]');
+      if (!(checkbox instanceof HTMLInputElement && checkbox.id)) return;
+
+      props.removeTodo(checkbox.id);
+      return;
+    }
+
+    if (event.target instanceof HTMLInputElement) {
+      const toggle = {
+        id: event.target.id,
+        force: event.target.checked,
+      };
+      props.toggleTodo(toggle);
+      return;
+    }
+  };
+
+  return () => {
+    const [disabled, disabledAsString, disabledAsClass]: [
+      boolean,
+      'true' | 'false',
+      string,
+    ] =
+      props.status() !== availableStatus.READY
+        ? [true, 'true', 'js:c-todo-list--disabled']
+        : [false, 'false', ''];
+
+    return (
+      <ul
+        onClick={handleEvent}
+        class={disabledAsClass}
+        aria-disabled={disabledAsString}
+      >
+        <For each={props.todos}>
+          {(todo) => (
+            <li class="c-todo-list__item">
+              <input
+                id={todo.id}
+                type="checkbox"
+                checked={todo.completed}
+                disabled={disabled}
+              />
+              {props.renderContent({ todo })}
+              <button aria-disabled={disabledAsString}>❌</button>
+            </li>
+          )}
+        </For>
+      </ul>
+    );
+  };
+}
+
+export { TodoList };
+```
+
+Leaf components have (potentially) two jobs:
+1. Propagate UI events to the client side app. `TodoList` handles the `click`s on the toggle checkbox or remove button on any one of its todo items. It consequently dispatches the necessary event information to the app with the `toggleTodo` and `removeTodo` props. Ideally it shouldn't modifiy the UI on it's own accord. Even for [“optimistic UI”](https://www.smashingmagazine.com/2016/11/true-lies-of-optimistic-user-interfaces/), the app should be likely handling the “optimistic” part. 
+2. Project relevant application events to the UI. `TodoList` renders todos accessible via the `todos` store accessor prop. Whenever `todos` propagates any changes `TodoList` updates the list view reactively. 
+
+---
+
+[Qwik](https://qwik.builder.io/) ([now](https://qwik.builder.io/docs/qwikcity/) supported [inside Astro](https://www.builder.io/blog/astro-qwik)) also has promise with some caveats:
+- Its [component](https://qwik.builder.io/docs/components/overview/) and [serialization](https://qwik.builder.io/docs/guides/serialization/) boundaries may have some runtime impact. Also optimal partitioning of any particular application can easily become a non-trivial problem. Only broader use will show whether these concerns will bear out. 
+- "Streaming the application in chunks" is a blessing that could easily turn into a curse if it is used as a license to let client applications grow arbitrarily large, eventually overwhelming some client devices. An application with a strict [JavaScript budget](https://medium.com/@addyosmani/the-cost-of-javascript-in-2018-7d8950fbb5d4#97fc) may decide much earlier to adopt a Multi-(Applet-Page) design which could result in better UX for devices of more constrained capabilities. 
 
 ---
 
@@ -1780,7 +2128,7 @@ These inter-component communication requirements are often satiesfied via extern
 
 The *ownership (or nested) composition pattern* tends to also surface in the design of many Web Components. One issue is that the creation values (attributes) are limited to being strings for vanilla WCs. WC-based libraries will often work around this by providing library specific [tagged templates](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#tagged_templates) which create the WC instance behind the scenes to then later provide that instance with any non-string values via its instance *properties*. However the fundamental issue remains. The "actor" *rendering* the component isn't necessary the component (or components) that needs to *communicate* with it during its lifetime within the application.
 
-That is why in this demo components **don't** *communicate* with one another. And while Web Components are `class`-based they are unabled to accept *any* constructor arguments. But thanks to the wonderful weirdness of JavaScript we call declare classes at runtime! That way Web Component classes are not created until the necessary dependencies have been passed to the supporting [module](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules). Now this sequence of operations is followed: 
+That is why in this demo components **don't** *communicate* with one another. And while Web Components are `class`-based they are unabled to accept *any* constructor arguments. But thanks to the wonderful weirdness of JavaScript we can declare classes at runtime! That way Web Component classes are not created until the necessary dependencies have been passed to the supporting [module](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules). Now this sequence of operations is followed: 
 - the client side application is *resumed* with the `resume-data` found on the page
 - with the application primed, its services can be passed to create the necessary Web Component classes (e.g. `makeDefinition()`)
 - once the Web Component class is registered it can bind to the existing sites on the DOM but connects directly to the application services to

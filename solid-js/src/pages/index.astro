@@ -4,8 +4,6 @@ import Base from '../layouts/base.astro';
 import { App, makeResumeState } from '../app/ui/app';
 import { selectTodos } from './todos-store';
 
-export const prerender = false;
-
 const resumeState = makeResumeState(await selectTodos(Astro.locals.sessionId));
 const title = `Astro "solid-js: zero to hero" Todos`;
 const todosApiHref = '/api/todos';

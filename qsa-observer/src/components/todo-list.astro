@@ -13,10 +13,9 @@ const { todos } = Astro.props;
 
 <ul class="js:c-todo-list js:c-todo-list--disabled" aria-disabled="true">
 	{
-		todos.map((todo) => (
-			<TodoItem {todo}>
-				<TodoContent {todo} />
-			</TodoItem>
-		))
+		todos.map((todo) =>
+			// prettier-ignore
+			<TodoItem {todo}><TodoContent {todo} /></TodoItem>
+		)
 	}
 </ul>

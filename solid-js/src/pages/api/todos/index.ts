@@ -18,6 +18,7 @@ async function POST(context: APIContext) {
 	const todo = await appendTodo(context.locals.sessionId, title).then(
 		makeDelay()
 	);
+	console.log(`(${context.locals.sessionId})/api/todos: new todo`, todo);
 	return new Response(JSON.stringify(todo), { status: 200 });
 }
 

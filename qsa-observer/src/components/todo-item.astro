@@ -18,7 +18,7 @@ const [todoId, index, checked, disabled] = todo
 ---
 
 <li class="c-todo-list__item" data-index={index}>
-	<input type="checkbox" {checked} id={todoId} {disabled} />
-	<slot />
-	<button aria-disabled="true">❌</button>
+	<input type="checkbox" {checked} id={todoId} {disabled} /><slot /><button
+		aria-disabled="true">❌</button
+	>
 </li>

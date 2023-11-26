@@ -3,7 +3,7 @@ import { availableStatus, type AvailableStatus } from './available-status';
 import { createEffect, createSignal, createResource } from 'solid-js';
 import { createStore, reconcile } from 'solid-js/store';
 
-import type { Todo, TodoActions, ToggleTodo } from './types';
+import type { NewTodo, Todo, TodoActions, ToggleTodo } from './types';
 
 function findTodoById(todos: Todo[], id: string) {
 	for (let i = 0; i < todos.length; i += 1) if (todos[i].id === id) return i;
@@ -28,14 +28,14 @@ function makeApp(actions: TodoActions, initialState: Todo[]) {
 	const readyStatus = () => setStatus(availableStatus.READY);
 	const waitStatus = () => setStatus(availableStatus.WAIT);
 
-	const [addNew, setAddNew] = createSignal<string>();
+	const [addNew, setAddNew] = createSignal<NewTodo>();
 	const [addedNew] = createResource(addNew, actions.addTodo);
 	createEffect(function addNewTodo() {
 		const todo = addedNew();
 		if (!todo) return;
 
 		const i = findByIndex(items, todo.index);
-		items = items.toSpliced(i, 0, todo);
+		items.splice(i, 0, todo);
 		setTodos(reconcile(items));
 	});
 
@@ -48,7 +48,7 @@ function makeApp(actions: TodoActions, initialState: Todo[]) {
 		const i = findTodoById(items, id);
 		if (i < 0) return;
 
-		items = items.toSpliced(i, 1);
+		items.splice(i, 1);
 		setTodos(reconcile(items));
 	});
 
@@ -61,8 +61,7 @@ function makeApp(actions: TodoActions, initialState: Todo[]) {
 		const i = findTodoById(items, todo.id);
 		if (i < 0 || items[i].completed === todo.completed) return;
 
-		items[i].completed = todo.completed;
-		items = items.slice();
+		items[i] = todo;
 		setTodos(reconcile(items));
 	});
 
@@ -73,7 +72,7 @@ function makeApp(actions: TodoActions, initialState: Todo[]) {
 	});
 
 	const addTodo = (title: string) => {
-		setAddNew(title);
+		setAddNew({ title });
 	};
 
 	const removeTodo = (id: string) => {

@@ -47,7 +47,7 @@ function TodoNew(props: Props) {
 				  : ['false', '', CLASS_SUBMIT];
 
 		return (
-			<form class="c-todo-new">
+			<form>
 				<input
 					ref={inputRef}
 					name="todo-title"

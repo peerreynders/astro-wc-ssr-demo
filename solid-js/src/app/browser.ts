@@ -1,6 +1,5 @@
 // file: src/app/browser.ts
-import type { ToggleTodo } from './types';
-import type { Todo } from '../types';
+import type { NewTodo, Todo, ToggleTodo } from './types';
 
 function makeTodoActions(href: string) {
 	const todoHref = (id: string) => `${href}/${id}`;
@@ -11,7 +10,7 @@ function makeTodoActions(href: string) {
 		toggleTodo,
 	};
 
-	async function addTodo(title: string) {
+	async function addTodo({ title }: NewTodo) {
 		const body = new FormData();
 		body.append('title', title);
 		const response = await fetch(href, { method: 'POST', body });

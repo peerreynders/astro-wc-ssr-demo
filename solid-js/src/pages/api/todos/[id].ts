@@ -30,11 +30,15 @@ async function POST(context: APIContext) {
 	if (intent !== 'remove' && intent !== 'toggle')
 		return failureResponse('"intent" has to be either "remove" or "toggle"');
 
-	if (intent === 'remove')
+	if (intent === 'remove') {
+		console.log(`(${context.locals.sessionId})/api/todos/${todoId} remove`);
 		return remove(context.locals.sessionId, todoId).then(makeDelay());
-
+	}
 	// Optional `force` field
 	const force = data.get('force');
+	console.log(
+		`(${context.locals.sessionId})/api/todos/${todoId} toggle: ${force}`
+	);
 	return toggle(
 		context.locals.sessionId,
 		todoId,
