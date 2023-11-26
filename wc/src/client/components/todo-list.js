@@ -28,10 +28,6 @@ function makeCloneBlankItem() {
 	if (!(root instanceof HTMLLIElement))
 		throw new Error(`Unexpected ${TEMPLATE_ITEM_ID} template root`);
 
-	// Turn off aria-disabled
-	const element = root.querySelector('[aria-disabled="true"]');
-	if (element) element.setAttribute('aria-disabled', 'false');
-
 	return function cloneBlankItem() {
 		return /** @type {HTMLLIElement} */ (root.cloneNode(true));
 	};

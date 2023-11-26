@@ -12,13 +12,13 @@ const [todoId, index, checked, disabled] = todo
 			todo.id,
 			String(todo.index),
 			todo.completed ? 'checked' : undefined,
-			'disabled',
+			true,
 	  ]
-	: ['', '', undefined, undefined];
+	: ['', '', undefined, false];
 ---
 
 <li class="c-todo-list__item" data-index={index}>
 	<input type="checkbox" {checked} id={todoId} {disabled} /><slot /><button
-		aria-disabled="true">❌</button
+		aria-disabled={disabled ? 'true' : 'false'}>❌</button
 	>
 </li>
