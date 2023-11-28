@@ -1,0 +1,126 @@
+---
+// file: src/layouts/base.astro
+interface Props {
+	title: string;
+}
+
+const title = Astro.props.title;
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+		<style is:global>
+			:root {
+				--color-disabled-light: rgba(239, 239, 239, 0.3);
+				--color-disabled-dark: rgba(16, 16, 16, 0.3);
+			}
+
+			button {
+				border: none;
+				cursor: pointer;
+				margin-inline-start: 0.3em;
+
+				&:hover {
+					opacity: 0.8;
+				}
+
+				&:focus:not(:focus-visible) {
+					outline: none;
+				}
+
+				&[aria-disabled='true'] {
+					background-color: var(--color-disabled-light);
+					color: var(--color-disabled-dark);
+					opacity: 0.5;
+					cursor: not-allowed;
+				}
+			}
+
+			main {
+				display: block;
+				font-family: sans-serif;
+				text-align: center;
+
+				& h3 {
+					margin-block-start: 0.5em;
+				}
+
+				& ul {
+					list-style: none;
+					padding: 0;
+				}
+			}
+
+			/* todo-new rulesets */
+			.c-todo-new__submit {
+				position: relative;
+
+				/* wait indicator */
+				&::after {
+					--_offset-spinner: calc(50% - 0.6em);
+					--_diameter-spinner: 0.8em;
+					content: '';
+					block-size: var(--_diameter-spinner);
+					border: 3px solid DarkSlateGray;
+					border-bottom-color: transparent;
+					border-left-color: transparent;
+					border-radius: 50% 50% 50% 0;
+					display: block;
+					inline-size: var(--_diameter-spinner);
+					inset-block-start: var(--_offset-spinner);
+					inset-inline-start: var(--_offset-spinner);
+					opacity: 0;
+					position: absolute;
+					transition: opacity 250ms;
+				}
+			}
+
+			@-webkit-keyframes rotate {
+				0% {
+					transform: rotate(0deg);
+				}
+				100% {
+					transform: rotate(360deg);
+				}
+			}
+
+			@keyframes rotate {
+				0% {
+					transform: rotate(0deg);
+				}
+				100% {
+					transform: rotate(360deg);
+				}
+			}
+
+			.js\:c-todo-new--wait {
+				color: transparent;
+				pointer-events: none;
+			}
+
+			.js\:c-todo-new--wait::after {
+				opacity: 1;
+				-webkit-animation: rotate 750ms linear infinite;
+				animation: rotate 750ms linear infinite;
+			}
+
+			/* todo-list rulesets */
+			.c-todo-list__item {
+				:display: block;
+				font-family: sans-serif;
+
+				& input:checked + label {
+					text-decoration: line-through;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<slot />
+	</body>
+</html>

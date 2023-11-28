@@ -1,0 +1,23 @@
+---
+// file: src/pages/index.astro
+import Base from '../layouts/base.astro';
+import { App, makeResumeState } from '../app/ui/app';
+import { selectTodos } from './todos-store';
+
+const resumeState = makeResumeState(await selectTodos(Astro.locals.sessionId));
+const title = `Astro "preact: zero to hero" Todos`;
+const todosApiHref = '/api/todos';
+---
+
+<Base {title}>
+	<main>
+		<h3>
+			{title} [<a
+				href="https://thepassle.github.io/webcomponents-from-zero-to-hero">‡</a
+			>]
+		</h3>
+		<br />
+		<h1>To do</h1>
+		<App client:load {todosApiHref} {resumeState} />
+	</main>
+</Base>
