@@ -2131,7 +2131,7 @@ This enabled the now entrenched CSR [ownership composition](https://shripadk.git
 
 > What is usually glossed over is that the position of components in the component tree is related to the visual layout of the page which doesn't necessarily lead to the proximity of components that need to communicate with one another for the application to work. 
 
-These inter-component communication requirements are often satiesfied via external state referenced via [context](https://react.dev/learn/passing-data-deeply-with-context).
+These inter-component communication requirements are often satisfied via external state referenced via [context](https://react.dev/learn/passing-data-deeply-with-context).
 
 *Ownership-based (or nested) composition* tends to also surface in the design of many Web Components. One issue is that the creation values (attributes) are limited to being strings for vanilla WCs. WC-based libraries will often work around this by providing library specific [tagged templates](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#tagged_templates) which create the WC instance behind the scenes to then later provide that instance with any non-string values via its instance *properties*. However the fundamental issue remains. The "actor" *rendering* the component isn't necessary the component (or components) that needs to *communicate* with it during its lifetime within the application.
 
