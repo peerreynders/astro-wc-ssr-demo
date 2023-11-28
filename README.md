@@ -14,7 +14,7 @@ Even when it comes to μ-frontends, the going recommendation is to stick to one,
 
 The argument that any Web Component based framework will be comparatively [long-lived](https://jakelazaroff.com/words/web-components-will-outlive-your-javascript-framework/) because "it's based on a platform standard" is also more than a little bit disingenuous ([AppCache](https://web.archive.org/web/20210603132501/https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache) ([2018](https://groups.google.com/a/chromium.org/g/blink-dev/c/FvM-qo7BfkI/m/0daqyD8kCQAJ)) would like [a word](https://youtu.be/zCXMh5K5hKQ)); [Polymer](https://polymer-library.polymer-project.org/) in particular went through a number of major revisions over the years (1.0 (2015), 2.0 (2017), 3.0 (2018), [lit-html](https://youtu.be/Io6JjgckHbg) (2017, [fyi](https://gist.github.com/WebReflection/ab43649d9e4a53ac900b5924c77a310e)), Lit 1.0 (2019), Lit 2.0 (2021), [Lit](https://lit.dev/) 3.0 (2023)).
 
-This particular example is based on a reworked version of the [Web Components: From zero to hero](https://thepassle.github.io/webcomponents-from-zero-to-hero/) tutorial. Like most tutorials of this kind, it's unabashedly component-oriented ([centric](https://twitter.com/acemarke/status/1056669495354421249)) and by extension [client-side rendered (CSR)](https://www.patterns.dev/react/client-side-rendering) focused (very [pre-2016](https://github.com/vercel/next.js/releases/tag/1.0.0) and firmly rooted in the traditions of the [desktop web](https://youtu.be/wsdPeC86OH0?t=472)). *Continued in [More Thoughts on Web Components](#more-thoughts-on-web-components).*
+This particular example is based on a reworked version of the [Web Components: From zero to hero](https://thepassle.github.io/webcomponents-from-zero-to-hero/) tutorial. As would be expected, it's unabashedly component-oriented ([centric](https://twitter.com/acemarke/status/1056669495354421249)) and by extension [client-side rendered (CSR)](https://www.patterns.dev/react/client-side-rendering) focused (very [pre-2016](https://github.com/vercel/next.js/releases/tag/1.0.0) and firmly rooted in the traditions of the [desktop web](https://youtu.be/wsdPeC86OH0?t=472)). *Continued in [More Thoughts on Web Components](#more-thoughts-on-web-components).*
 
 ## The Recipe
 
@@ -54,7 +54,7 @@ const { title, todoItems } = Astro.props;
 </todos-view>
 ```
 
-[Astro components](https://docs.astro.build/en/core-concepts/astro-components/) are essentially server rendered partials using a JSX-like (but more [HTML adjacent](https://docs.astro.build/en/core-concepts/astro-syntax/#differences-between-astro-and-jsx)) templating syntax that is preceded by some preparatory JavaScript (or TypeScript in this case) code in the frontmatter. `todos-view` is the Web Component which is clearly passed some child content. The component starts to manage any relevant parts of the light DOM (i.e. normal DOM, as opposed to [shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM)) that it contains.
+[Astro components](https://docs.astro.build/en/core-concepts/astro-components/) are essentially server rendered partials using a JSX-like (but more [HTML adjacent](https://docs.astro.build/en/core-concepts/astro-syntax/#differences-between-astro-and-jsx)) templating syntax that is preceded by some preparatory JavaScript (or TypeScript in this case) code in the frontmatter. `todos-view` is the Web Component which is passed some child content. The component starts to manage any relevant parts of light DOM (i.e. normal DOM, as opposed to [shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM)) that it contains.
 
 > FYI: A `js:` prefix identifies a class name as a [JavaScript hook](https://cssguidelin.es/#javascript-hooks); i.e. it's selected and/or manipulated by JS code, so it shouldn't be renamed during a pure CSS refactor. The `c-` prefix [namespaces](https://csswizardry.com/2015/08/bemit-taking-the-bem-naming-convention-a-step-further/#namespaces) the class name as being (visual design) component-related (design system and UI component boundaries don't always coincide). 
 
@@ -83,7 +83,7 @@ const [todoId, title, index, checked] = todo
 </li>
 ```
 
-Note that unlike the original example there isn't another Web Component (`to-do-item`) here. See [*some thoughts on the original example*](#some-thoughts-on-the-original-example) for further discussion.
+Note that unlike the [original example](https://stackblitz.com/edit/web-components-zero-to-hero-part-one?file=to-do-item.js) there isn't another Web Component (`to-do-item`) here. See [*some thoughts on the original example*](#some-thoughts-on-the-original-example) for further discussion.
 
 The `todos-view.astro` component is rendered as part of the page:
 
@@ -124,7 +124,7 @@ The partial needs to be able to render itself as a *blank*. Here when the partia
 
 ### 3. Include the client partials in `<template>` elements within the page.
 
-This is what the `<MainTemplates />` Astro component in the page accomplishes.
+That is what the `<MainTemplates />` Astro component in the page accomplishes.
 
 ```Astro
 ---
@@ -140,7 +140,7 @@ Each template can be easily selected via its `id`. Given that there is only one 
 
 ### 4. Select the template inside the Web Component module.
 
-Most modern JavaScript is loaded [`async`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#async), [`defer`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#defer) or [`type="module"`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#module), i.e. by the time the document has already been fully parsed. So the Web Component module can be initialized (`todosView.initialize()`) when the bundle entry code is run (so there is no need to deal with [`readyState`, `DOMContentLoaded`](https://developer.mozilla.org/en-US/docs/Web/API/Document/DOMContentLoaded_event#checking_whether_loading_is_already_complete)):
+Most modern JavaScript is loaded [`async`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#async), [`defer`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#defer) or [`type="module"`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#module), i.e. by that time the document has already been fully parsed. So the Web Component module can be initialized when the bundle entry code is run (so there is no need to deal with [`readyState`, `DOMContentLoaded`](https://developer.mozilla.org/en-US/docs/Web/API/Document/DOMContentLoaded_event#checking_whether_loading_is_already_complete)):
 
 ```JavaScript
 // @ts-check
@@ -448,7 +448,7 @@ hookupUI(app);
 app.start();
 ```
 
-The `todo-list` definition is supplied with functions to initiate the removal and toggling of a `todo`. It also gets access to the subscription point for `TodoEvent`s which notifies it when a todo has been successfully removed, toggled or created. It monitors the available `status` so that it can disable the toggle checkboxes and remove buttons whenever the application isn't ready.
+The `todo-list` definition is supplied with functions to initiate the removal and toggling of a `Todo`. It also gets access to the subscription point for `TodoEvent`s which notifies it when a todo has been successfully removed, toggled or created. It monitors the available `status` so that it can disable the toggle checkboxes and remove buttons whenever the application isn't ready.
 
 The `todo-new` definition also includes the subscription point for the available `status`; not only does it disable the `c-todo-new__submit` button whenever the application isn't ready but it also activates the spinner (`js:c-todo-new--wait`) specifically for the wait status. The definition is also supplied with the function needed to initiate the creation of a new todo.
 
@@ -484,7 +484,7 @@ This suggests the following sequence of events:
 6. Existing disconnected components will dispose of themselves while new components connect to the client application to receive further updates later.
 7. After completing, the UI is ready for the next UI Event (and the application is ready to accept a server side event that will change the UI).
 
-This also suggests a strong coupling between route management and the client side application (This is why [Michel Weststrate](https://github.com/mweststrate) replaced React Router with [manual routing](https://github.com/mweststrate/react-mobx-shop/blob/react-amsterdam-2017/src/stores/ViewStore.js) in his [React + MobX Bookshop](https://github.com/mweststrate/react-mobx-shop) demo ([presentation](https://youtu.be/3J9EJrvqOiM), [article](https://michel.codes/blogs/ui-as-an-afterthought))). However a strict separation of the client application from the [Web APIs](https://developer.mozilla.org/en-US/docs/Web/API) is desirable from the [microtesting](https://youtu.be/H3LOyuqhaJA) perspective (hence the separation of `app/browser.js` from `app/index.js`).
+This also suggests a strong coupling between route management and the client side application (this is why [Michel Weststrate](https://github.com/mweststrate) replaced React Router with [manual routing](https://github.com/mweststrate/react-mobx-shop/blob/react-amsterdam-2017/src/stores/ViewStore.js) in his [2017 React + MobX Bookshop](https://github.com/mweststrate/react-mobx-shop) demo ([presentation](https://youtu.be/3J9EJrvqOiM), [article](https://michel.codes/blogs/ui-as-an-afterthought))). However a strict separation of the client application from the [Web APIs](https://developer.mozilla.org/en-US/docs/Web/API) is desirable from the [microtesting](https://youtu.be/H3LOyuqhaJA) perspective (hence the separation of `app/browser.js` from `app/index.js`).
 
 This demo doesn't really use much of the Web Component API. In fact it doesn't even need that API. The [`qsa-observer` variant](qsa-observer/README.md) (increasing the minified bundle by 1.5 kB) implements exactly the same demo without Web Components; [`qsa-observer`](https://github.com/WebReflection/qsa-observer) itself is based on [`Mutation Observer`](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver). 
 
@@ -495,7 +495,7 @@ But we're really not dealing with components in colloquial sense anymore, are we
     - It “connects” *after* it's DOM subtree is rendered from elsewhere
     - After that it updates when [told](https://media.pragprog.com/articles/jan_03_enbug.pdf) by the application.
 
-Entering [Generation 3](https://igor.dev/posts/experiences-web-frameworks-future-me/#return-to-server) server and client need to work more closely together to deliver better and faster UX. Here Web Components are at a distinct disadvantage because they are firmly stuck in [Generation 2](https://igor.dev/posts/experiences-web-frameworks-future-me/#gen2). Sure, [Lit](https://lit.dev/docs/ssr/overview/) will eventually support SSR but now we are no longer *just using the platform* **and** we are forced to run JS on the server anyway (perhaps with a slow or incomplete server side emulation of DOM).
+Entering [Generation 3](https://igor.dev/posts/experiences-web-frameworks-future-me/#return-to-server) server and client need to work together more closely to deliver better and faster UX. Here Web Components are at a distinct disadvantage because they are firmly stuck in [Generation 2](https://igor.dev/posts/experiences-web-frameworks-future-me/#gen2). Sure, [Lit](https://lit.dev/docs/ssr/overview/) will eventually support SSR but now we are no longer *just using the platform* **and** we are forced to run JS on the server anyway (perhaps with a slow or incomplete server side emulation of DOM).
 
 There is no [one web platform](https://www.quirksmode.org/blog/archives/2015/05/tools_dont_solv.html#:~:text=The%20web%20platforms%2C%20plural) but in fact it's a wide spectrum of innumerable combinations of client device capabilities, network conditions and server platforms/technologies. This has been especially true since [mobile reset everything](https://twitter.com/slightlylate/status/1432072075276083205). 
 
@@ -505,7 +505,7 @@ Faced with a similar situation, needing to maximize the performance yielded from
 
 From: [Data-Oriented Design: Mapping the problem](https://www.dataorienteddesign.com/dodbook/node12.html#SECTION001220000000000000000)
 
-Of course that approach won't work in web development as there is no one machine to run the clients or the servers on. But there should always be serious considerations of what trade offs are being made. Meanwhile the reported developer convenience of React-style components really hasn't resulted in the desired [trickle-down UX](https://infrequently.org/2023/02/the-market-for-lemons/#:~:text=the%20koans%20of-,trickle%2Ddown%20UX,-%E2%80%94%20it%20can) while the cost to UX has been [reported](https://aerotwist.com/blog/react-plus-performance-equals-what/) [again](https://timkadlec.com/remembers/2020-04-21-the-cost-of-javascript-frameworks/#javascript-main-thread-time) and [again](https://css-tricks.com/radeventlistener-a-tale-of-client-side-framework-performance/) (though to some extend the "ecosystem" [is to blame as well](https://twitter.com/dan_abramov/status/1259618524751958016)).
+Of course that approach won't work in web development as there is no one machine to run the clients or the servers on. But which trade offs are being made should always be given serious consideration. Meanwhile the reported developer convenience of React-style components really hasn't resulted in the desired [trickle-down UX](https://infrequently.org/2023/02/the-market-for-lemons/#:~:text=the%20koans%20of-,trickle%2Ddown%20UX,-%E2%80%94%20it%20can) while the cost to UX has been [reported](https://aerotwist.com/blog/react-plus-performance-equals-what/) [again](https://timkadlec.com/remembers/2020-04-21-the-cost-of-javascript-frameworks/#javascript-main-thread-time) and [again](https://css-tricks.com/radeventlistener-a-tale-of-client-side-framework-performance/) (though to some extend the "ecosystem" [is to blame as well](https://twitter.com/dan_abramov/status/1259618524751958016)).
 
 Web development's pre-occupation with **components** could simply be *bad for creating an optimal solution* for client browsers. Browsers were designed for pages, not components. So for an optimal end user experience use all performant browser features to maximum effect. That includes creating DOM from server rendered HTML whenever reasonable rather than running JavaScript to create it and using CSS that is available before JavaScript even has a chance to run, both of which can proceed to parse and layout before or in [parallel](https://developer.chrome.com/blog/inside-browser-part1/) to JavaScript [downloading, parsing and executing](https://medium.com/@addyosmani/the-cost-of-javascript-in-2018-7d8950fbb5d4#0d36). 
 
@@ -627,7 +627,7 @@ export { makeApp };
 - `removedById`'s resource is driven by the `removeId` accessor. When a new todo ID appears on `removeId` (via the exposed `removeTodo` function) the resource triggers the `removeTodo` action. When the delete has been confirmed the specified todo is removed from the client side `todos` inside the `removeFromTodos` effect.
 - `toggled`'s resource is driven by the `toggle` accessor. When a new `ToggleTodo` appears on `toggle` (via the exposed `toggleTodo` function) the resource triggers the `toggleTodo` action. When the action has been confirmed the latest todo is replaced in `todos` within the `toggleTodo` effect.
 - The `adjustAvailableStatus` effect executes `waitStatus` whenever one of `addedNewTodo`, `removedById` or `toggled` is loading. Once **all** of them are not loading `readyStatus` is executed. 
-- The wrapping `removeTodo` and `toggleTodo` functions simply demonstrate how *the app* retains ultimate control over it's own signal `Setter`s. 
+- The wrapping `removeTodo` and `toggleTodo` functions simply demonstrate how *the app* retains ultimate control over its own signal `Setter`s. 
 
 The Astro page:
 
@@ -689,7 +689,7 @@ export { App, makeResumeState };
 
 `App` composes the `Conduit` [context](https://docs.solidjs.com/references/concepts/state-management/context) with the [niladic](https://www.logicroom.co/blog/upgrade-your-react-ui-architecture#:~:text=is...%20none.-,Niladic,-The%20moment%20we) `TodoNew` and `TodoList` UI components.
 
-It should be noted that the `Conduit` value will **never** change once the component tree is created. App-bound data propagates via any functions that are exposed on the `Conduit` while component-bound data propagates along reactive signals and stores on the `Conduit`. The `Conduit` aggregates any information needed on the app-component highway in order to avoid [*Context Hell*](https://gist.github.com/zerkalica/e88192cf7adef439c9f0faab9235c0ba).
+It should be noted that the `Conduit` value will **never** change once the reactive graph has been established. App-bound data propagates via any functions that are exposed on the `Conduit` while component-bound data propagates along reactive signals and stores on the `Conduit`. The `Conduit` aggregates any information needed on the app-component highway in order to avoid [*Context Hell*](https://gist.github.com/zerkalica/e88192cf7adef439c9f0faab9235c0ba).
 
 The tradeoff is the introduction of niladic UI components (i.e. in the `app/ui` directory) that act as a [gateway](https://martinfowler.com/eaaCatalog/gateway.html)s for the props-only (context-free) components (under `app/ui/components`). These UI components are simple wrappers that narrow the `Conduit` interface (and apply transformations if necessary) to the props for the component(s) they delegate to; The represent the [boundary](https://martinfowler.com/bliki/SegregatedDOM.html) between the application logic and the UI logic.
 
@@ -853,7 +853,7 @@ export { TodoList };
 
 Leaf components have (potentially) two jobs:
 1. Propagate UI events to the client side app. `TodoList` handles the `click`s on the toggle checkbox or remove button on any one of its todo items. It consequently dispatches the necessary event information to the app with the `toggleTodo` and `removeTodo` props. Ideally it shouldn't modifiy the UI on it's own accord. Even for [“optimistic UI”](https://www.smashingmagazine.com/2016/11/true-lies-of-optimistic-user-interfaces/), the app should be likely handling the “optimistic” part. 
-2. Project relevant application events to the UI. `TodoList` renders todos accessible via the `todos` store accessor prop. Whenever `todos` propagates any changes `TodoList` updates the list view reactively. 
+2. Project relevant application events to the UI. `TodoList` renders todos accessible via the `todos` store accessor prop. Whenever `todos` propagates any changes, `TodoList` updates the list view reactively. 
 
 
 In terms of the JavaScript payload:
@@ -1586,7 +1586,7 @@ const title = `Astro "WC: zero to hero" Todos`;
 </Base>
 ```
 
-The headings are now just static parts of the page while the `TodoNew` and `TodoList` Astro components are responsible for rendering the component content that will allow the Web Components to correctly mount.
+The headings are now just static parts of the page while the `TodoNew` and `TodoList` Astro components are responsible for rendering the component content that will allow the Web Components to mount correctly.
 
 Currently todo `new`, `toggle`, and `update` happen too quickly on `localhost`:
 
@@ -1641,7 +1641,7 @@ On the client side the app needs to publish `AvailableStatus`:
 
 ```JavaScript
 // @ts-check
-
+// file: src/client/app/available-status.js
 const availableStatus = /** @type {const} */ ({
   UNAVAILABLE: -1,
   WAIT: 0,
@@ -2057,7 +2057,7 @@ From a [recent article](https://adactio.com/journal/20618):
 
 This is about [progressive enhancement](https://alistapart.com/article/understandingprogressiveenhancement/), i.e. rendering HTML on the server, letting the browser build the DOM without JS and then handing the completed DOM over to JavaScript *to augment*. A more appropriate name for *progressively enhanced elements* would have been [Custom Elements](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements)—a term already reserved to distinguish between *customized built-in elements* and *autonomous custom elements*.
 
-Customized build-in elements are the closest to the notion of *progressively enhanced elements* but [WebKit has no intent on supporting them](https://github.com/WebKit/standards-positions/issues/97) (though this can be mitigated with [`builtin-elements`](https://github.com/WebReflection/builtin-elements)).
+Customized build-in elements are the closest to the notion of *progressively enhanced elements* but [WebKit has no intent of supporting them](https://github.com/WebKit/standards-positions/issues/97) (though this can be mitigated with [`builtin-elements`](https://github.com/WebReflection/builtin-elements)).
 
 This is perhaps why Web Component tutorials primarily focus on *autonomous custom elements*. Consequently Web Component tutorials (and proponents) seem to focus on using *autonomous custom elements* for implementing fully client-side rendered UI components, serving as an alternative to [framework components](https://docs.astro.build/en/core-concepts/framework-components/).
 
@@ -2098,7 +2098,7 @@ A component that could be factored out is a "new todo input" which could also do
 So what are Web Components good for? When including [shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM) 
 and [declarative shadow DOM](https://developer.chrome.com/articles/declarative-shadow-dom/) it's suggestive of “[`<iframe>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe) Enterprise Edition”, i.e. a more refined means for deploying third party content (mostly ads) to be included in affilated content sites/applications.
 
-Built-in custom elements are extremely useful to augment existing HTML elements but [WebKit's position](https://github.com/WebKit/standards-positions/issues/97) makes it necessary to base those on a [ponyfill](https://github.com/WebReflection/builtin-elements).
+Built-in custom elements are extremely useful for augmenting existing HTML elements but [WebKit's position](https://github.com/WebKit/standards-positions/issues/97) makes it necessary to base those on a [ponyfill](https://github.com/WebReflection/builtin-elements).
 
 I really, really wanted to like Web Components, being *part of the platform* and all. Started with [HowTo Components](https://web.dev/articles/components-examples-overview) (2017, [repo](https://github.com/GoogleChromeLabs/howto-components), [some explainers](https://github.com/google/WebFundamentals/tree/1c1d9a95c835c78b6a7497cfce0ce92e77aa8ac8/src/content/en/fundamentals/web-components/examples)) and continued with the [Web Components in Action](https://www.manning.com/books/web-components-in-action) MEAP (2019, gists: [1](https://gist.github.com/peerreynders/937193d5d043ca63289ff93d52842571), [2](https://gist.github.com/peerreynders/c44d3bd373340d0f21fbe50435e41108), [3](https://gist.github.com/peerreynders/084079c213e9da2abfcbd613fdeb6abc), [4](https://gist.github.com/peerreynders/1d4396fa6eb67daac706969a6389a9ca), [5](https://gist.github.com/peerreynders/33c98ffb7b35bd9aeaed524332bf640a), [6](https://gist.github.com/peerreynders/f7253c42332a048539f892be747bc767)). At least by the end of WCA there was a suggestion of using an [`eventbus`](https://github.com/bengfarrell/webcomponentsinaction/blob/0f165a068b4ebbd37d2756920d0228aecb77f1bf/chapter14/workoutcreator/data/eventbus.js) to enable communication patterns among a page's Web Components that weren't coupled to their position in the DOM tree or whatever other Web Component happend to create its instance (and by extension its attributes). However it was still fully immersed in the SPA mindset of [full on client-side rendering](https://github.com/bengfarrell/webcomponentsinaction/blob/0f165a068b4ebbd37d2756920d0228aecb77f1bf/chapter14/workoutcreator/index.html).
 
@@ -2108,7 +2108,7 @@ The history of Web Components goes back to [2011](https://fronteers.nl/congres/2
 
 With the first release of Next.js in ([2016](https://github.com/vercel/next.js/releases/tag/1.0.0)) the writing was on the wall that CSR wasn't enough even for component-oriented architectures. In 2018 [@popeindustries/lit-html-server](https://github.com/popeindustries/lit-html-server) appeared on [npm](https://www.npmjs.com/package/@popeindustries/lit-html-server) for WC SSR ([later](https://www.npmjs.com/package/@popeindustries/lit-html-server) to be included in the [Stack Overflow PWA Demo](https://so-pwa.firebaseapp.com/)), so the shortfall was becoming extremely apparent.
 
-However one idea that didn't seem to catch on was settling on using [`<template>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) elements on the server rendered page to eliminate server and client template duplication, instead forcing the use of JS on the server to run JS Web Components for rendering as the preferred solution. This is likely due to the fact that delegating rendering markup to the server entirely removes the *convenient* “everything **and** the kitchen sink” [collocation](https://tidyfirst.substack.com/p/lumpers-and-splitters) of component-orientation. Framework components have created expections that vanilla Web Components simply cannot meet, while [not all "components" need to be DOM elements](https://youtu.be/BEWkLXU1Wlc?t=6359) ([Web Components Aren’t Components](https://keithjgrant.com/posts/2023/07/web-components-arent-components/)). 
+However one idea that didn't seem to catch on was settling on using [`<template>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) elements on the server rendered page to eliminate server and client template duplication, instead forcing the use of JS on the server to run JS Web Components for rendering as the preferred solution. This is likely due to the fact that delegating rendering markup to the server entirely removes the *convenient* “everything **and** the kitchen sink” [collocation](https://tidyfirst.substack.com/p/lumpers-and-splitters) of component-orientation. Framework components have created expectations that vanilla Web Components simply cannot meet, while [not all "components" need to be DOM elements](https://youtu.be/BEWkLXU1Wlc?t=6359) ([Web Components Aren’t Components](https://keithjgrant.com/posts/2023/07/web-components-arent-components/)). 
 
 There are plenty of competent Web Component analyses around, some of which are:
 - [Why I don't use Web Components (2019)](https://dev.to/richharris/why-i-don-t-use-web-components-2cia)
