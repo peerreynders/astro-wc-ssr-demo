@@ -3,7 +3,7 @@ tl;dr—[`<template>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element
 
 - [Web Component](wc/README.md) variant
 - [`qsa-observer`](qsa-observer/README.md) variant
-- [SolidJS](solid-js/README.md) variant
+- [SolidJS](solid-js/README.md) variant ([on StackBlitz](https://stackblitz.com/edit/withastro-astro-qxsuvd)) 
 - [Preact (no signals)](preact/README.md) variant ([on StackBlitz](https://stackblitz.com/edit/withastro-astro-storbz))
 
 The following will discuss a recipe for implementing server rendered Web Components with any server language of choice (while pondering some of the ongoing trends within the Web Component narrative); i.e. without being locked into running JS on the server.

@@ -1,6 +1,7 @@
 # astro-wc-ssr-demo (`solid-js` variant)
 - [Web Component](../wc/README.md) variant
 - [`qsa-observer`](../qsa-observer/README.md) variant
+- [`solid-js` on StackBlitz](https://stackblitz.com/edit/withastro-astro-qxsuvd)
 - [Preact (no signals)](../preact/README.md) variant ([on StackBlitz](https://stackblitz.com/edit/withastro-astro-storbz))
 - Top level [README](../README.md)
 
